@@ -96,6 +96,38 @@ Integrate with [homebridge](https://github.com/nfarina/homebridge) and [homebrid
           command_state: "/usr/bin/curl -X GET http://127.0.0.1:4568/api/status"
           value_template: '{{ value == "1" }}'
           friendly_name: HelloHue
+	  
+	  
+### Example of Systemd Autostart
+
+		sudo nano /etc/systemd/system/hellohue.service 
+	
+with the following Content
+
+		[Unit]
+		Description=HelloHue
+		After=network.target
+
+		[Service]
+		Environment=NODE_PORT=4568
+		Type=simple
+		User=pi
+		WorkingDirectory=/home/pi/HelloHueMod/
+		ExecStart=/usr/bin/node index.js
+		Restart=on-failure
+
+		[Install]
+		WantedBy=multi-user.target
+		
+Enable Systemctl
+		
+		systemctl enable hellohue.service
+		
+	
+Check Status of Systemctl
+
+		systemctl status hellohue.service
+
 
 ### Support the project
 I've modified HelloHue
