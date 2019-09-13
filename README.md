@@ -98,7 +98,6 @@ Integrate with [homebridge](https://github.com/nfarina/homebridge) and [homebrid
           friendly_name: HelloHue
 
 ### Support the project
-I've developed HelloHue on my free time, so if you like it please think about buying me a beer!
-
-[![](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif "")
-](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WZTWSG87P9G8E "https://paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WZTWSG87P9G8E")
+I've modified HelloHue
+if you want to donate please go to the original page
+https://github.com/ledge74/HelloHue
