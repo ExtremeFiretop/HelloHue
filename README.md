@@ -113,7 +113,7 @@ with the following Content
 		Type=simple
 		User=pi
 		WorkingDirectory=/home/pi/HelloHueMod/
-		ExecStart=/usr/bin/node index.js
+		ExecStart=/usr/local/bin/node index.js
 		Restart=on-failure
 
 		[Install]
