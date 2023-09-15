@@ -1,5 +1,12 @@
 # HelloHue 
 
+## Updates in 1.0.1
+
+ - Adjustable transition time for brightness changes
+ - Fixed minimum media duration by implementing async handling
+ - Simplified console logging
+ - General refactor of `automation.js`
+
 ##### Sync Philips Hue lights with Plex!
 
 **Requirements**
@@ -33,7 +40,7 @@ Read [this support article](https://support.plex.tv/articles/115002267687-webhoo
 
  - In a browser, go the HelloHue app url, for example `http://127.0.0.1:4568/` if you are on the machine that runs HelloHue.
  1. Configure everything : Hue bridge, Plex server, Location.
-2. Then configure your Rooms. One room is composed of **one Player**, **one or multiple User(s)** and **one or multiple Hue Lights/Groups**. Below is some additional details about the most important settings :
+ 2. Then configure your Rooms. One room is composed of **one Player**, **one or multiple User(s)** and **one or multiple Hue Lights/Groups**. Below is some additional details about the most important settings :
 	 - `Plex Player name` you can find your Plex Players in your Plex Media Server -> settings -> Authorized devices. Only put ONE client per room. If your have two clients in the same room, activate an other room and fill the settings with the other clients name and the same lights names.
 	 - `Plex Users names` you can find the list of users in Plex Media Server -> settings -> home users. You can put multiple users (comma separated values, case sensitive).
 	 - You need to tick `Activate this room` in order for light actions to get triggered.
