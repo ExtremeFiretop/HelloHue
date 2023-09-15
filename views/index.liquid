@@ -268,7 +268,9 @@
                         <label for="dim_brightness">Brightness when dimming lights</label>
                         <input class="form-control-range" type="range" id="dim_brightness"
                           name="dim_brightness" value="{{ room.dim_brightness }}"
-                          min="1" max="254" step="1" list="tickmarks">
+                          min="1" max="254" step="1" list="tickmarks"
+                          oninput="this.nextElementSibling.value = this.value">
+                        <output>{{ room.dim_brightness }}</output>
                         <datalist id="tickmarks">
                           <option value="1" label="0%">
                           <option value="26">
@@ -281,6 +283,16 @@
                           <option value="202">
                           <option value="227">
                           <option value="254" label="100%">
+                      </div>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                      <div class="form-group">
+                        <label for="dim_transition">Transition time (in seconds)</label>
+                        <input class="form-control-range" type="range" id="dim_transition"
+                          name="dim_transition" value="{{ room.dim_transition }}"
+                          min="0" max="10" step="1"
+                          oninput="this.nextElementSibling.value = this.value">
+                        <output>{{ room.dim_transition }}</output>
                       </div>
                     </div>
                     <div class="col-md-12 mb-3">

@@ -13,6 +13,7 @@ router.post('/room/:id', function (req, res) {
     let night_mode = false;
     let active = false;
     let dim_brightness = 0;
+    let dim_transition = 0;
     let users = [];
     let lights = [];
     let groups = [];
@@ -54,6 +55,10 @@ router.post('/room/:id', function (req, res) {
         dim_brightness = parseInt(req.body.dim_brightness);
     }
 
+    if (req.body.dim_transition) {
+        dim_transition = parseInt(req.body.dim_transition);
+    }
+
     if (req.body.min_duration) {
         min_duration = parseInt(req.body.min_duration);
     }
@@ -72,6 +77,7 @@ router.post('/room/:id', function (req, res) {
         lights,
         users,
         dim_brightness,
+        dim_transition,
         min_duration
     };
 

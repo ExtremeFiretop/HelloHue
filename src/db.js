@@ -25,6 +25,7 @@ db.defaults({
             "lights": [],
             "groups": [],
             "dim_brightness": 127,
+            "dim_transition": 1,
             "hambisync": false,
             "night_mode": false,
             "min_duration": 0
@@ -42,6 +43,7 @@ db.defaults({
             "lights": [],
             "groups": [],
             "dim_brightness": 127,
+            "dim_transition": 1,
             "hambisync": false,
             "night_mode": false,
             "min_duration": 0
@@ -59,6 +61,7 @@ db.defaults({
             "lights": [],
             "groups": [],
             "dim_brightness": 127,
+            "dim_transition": 1,
             "hambisync": false,
             "night_mode": false,
             "min_duration": 0
@@ -76,6 +79,7 @@ db.defaults({
             "lights": [],
             "groups": [],
             "dim_brightness": 127,
+            "dim_transition": 1,
             "hambisync": false,
             "night_mode": false,
             "min_duration": 0
@@ -93,6 +97,7 @@ db.defaults({
             "lights": [],
             "groups": [],
             "dim_brightness": 127,
+            "dim_transition": 1,
             "hambisync": false,
             "night_mode": false,
             "min_duration": 0
