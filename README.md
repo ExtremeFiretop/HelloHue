@@ -1,5 +1,14 @@
 # HelloHue 
 
+## Updates in 1.0.2 - Minimum Changes to Bring to Date
+
+ - Bootstrap 5 migration – All data-toggle attributes changed to data-bs-toggle, alerts now use .btn-close instead of .close, and form elements updated (e.g., .custom-select → .form-select).
+ - Native tab handling – Removed jQuery’s $(...).tab(), now uses the new bootstrap.Tab API for tab navigation.
+ - Unique tab IDs – Fixed an issue causing the wrong tab to show on refresh by assigning unique IDs for links and content panes.
+ - Tooltip improvements – Switched to Bootstrap 5’s native bootstrap.Tooltip initialization instead of the jQuery approach.
+ - Script ordering – Ensured jQuery is loaded before Bootstrap scripts for proper Bootstrap Select functionality.
+ - Minor tweaks & refactoring – Adjusted classes, patterns, and placeholders to align with Bootstrap 5 best practices and reduce console warnings.
+
 ## Updates in 1.0.1
 
  - Adjustable transition time for brightness changes
