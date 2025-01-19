@@ -10,7 +10,7 @@
     "docker-run": "docker-run",
     "docker-push": "docker-push"
   },
-  "author": "ExtremeFiretop",
+  "author": "ledge74",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.18.3",
@@ -28,12 +28,12 @@
     "moment": "^2.22.2",
     "multer": "^1.4.0",
     "nodemon": "^3.1.9",
-    "plex-api": "^3.3.0",
+    "plex-api": "^5.3.2",
     "popper.js": "^1.14.4",
     "request": "^2.88.0",
     "suncalc": "^1.8.0",
     "winston": "^3.1.0",
     "ws": "^6.0.0"
   },
-  "docker-user": "ExtremeFiretop"
+  "docker-user": "ledge74"
 }
