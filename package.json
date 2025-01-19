@@ -10,7 +10,7 @@
     "docker-run": "docker-run",
     "docker-push": "docker-push"
   },
-  "author": "ledge74",
+  "author": "ExtremeFiretop",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.18.3",
@@ -35,5 +35,5 @@
     "winston": "^3.1.0",
     "ws": "^6.0.0"
   },
-  "docker-user": "ledge74"
+  "docker-user": "ExtremeFiretop"
 }
