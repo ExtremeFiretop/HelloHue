@@ -17,7 +17,7 @@ function processWebhook(payload) {
 
     let event = getEvent(payload.event);
     if (!event) {
-        logger.info('%s in not a supported event, ignoring webhook', event);
+        logger.info('%s is not a supported event, ignoring webhook', event);
         return false;
     }
 
