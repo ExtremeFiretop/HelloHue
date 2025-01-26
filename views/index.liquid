@@ -460,20 +460,26 @@
     </div>
 
     <script>
-      // Keep jQuery for bootstrap-select usage
-      {% for room in config.rooms %}
-        $('#lights{{ room.id }}').selectpicker('val', {{ room.lights }});
-        $('#groups{{ room.id }}').selectpicker('val', {{ room.groups }});
-      {% endfor %}
-
       document.addEventListener('DOMContentLoaded', function () {
-        // Initialize Bootstrap 5 tooltips
+        // Initialize all .selectpicker elements
+        $('.selectpicker').selectpicker();
+
+        // Now set each room’s <select> value
+        {% for room in config.rooms %}
+          var lightsArray{{ room.id }} = JSON.parse('{{ room.lights | json }}').map(function(x){ return String(x); });
+          var groupsArray{{ room.id }} = JSON.parse('{{ room.groups | json }}').map(function(x){ return String(x); });
+
+          $('#lights{{ room.id }}').selectpicker('val', lightsArray{{ room.id }});
+          $('#groups{{ room.id }}').selectpicker('val', groupsArray{{ room.id }});
+        {% endfor %}
+
+        // Initialize tooltips, etc.
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.map(function (tooltipTriggerEl) {
           return new bootstrap.Tooltip(tooltipTriggerEl);
         });
 
-        // If there is a hash in the URL that matches a tab link, show that tab via the native API
+        // If there is a hash in the URL that matches a tab link, show that tab
         if (window.location.hash) {
           const tabTriggerEl = document.querySelector('a[href="' + window.location.hash + '"]');
           if (tabTriggerEl) {
