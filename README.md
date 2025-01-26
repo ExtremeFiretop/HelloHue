@@ -33,7 +33,7 @@ This application detects when a media is playing, paused or stopped on your Plex
 
 ### Installation with Node
 
- 1. `git clone https://github.com/bam2000/HelloHue.git`
+ 1. `git clone https://github.com/ExtremeFiretop/HelloHue.git`
  2. `cd HelloHue`
  3. `npm i`
  4. `npm start`
