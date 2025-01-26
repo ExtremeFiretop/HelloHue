@@ -21,7 +21,7 @@
 **Requirements**
 
  - A Plex Pass subscription
- - A computer with Git / Node 8 / NPM 5 (alternatively, a Docker image is available)
+ - A computer with Git / Node 22 / NPM 8 (alternatively, a Docker image is available)
  
 ### Warning
 
