@@ -128,8 +128,16 @@ async function triggerLights(action, room) {
             hue.client.groups.getById(groupId)
                 .then(group => {
                     group.on = lightAttribute.on;
-                    if (lightAttribute.brightness) { group.brightness = lightAttribute.brightness; }
+                    if (lightAttribute.transitionTime) {
+                      group.transitionTime = lightAttribute.transitionTime;
+                    }
+                    if (lightAttribute.brightness) {
+                      group.brightness = lightAttribute.brightness;
+                    }
                     return hue.client.groups.save(group);
+                  })
+                .then(() => {
+                  logger.info(`Group ${groupId} updated with transitionTime=${lightAttribute.transitionTime}`);
                 })
                 .catch(error => { logger.error('Something went wrong updating groups: %j', error.stack); });
         });
