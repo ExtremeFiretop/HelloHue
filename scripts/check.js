@@ -105,7 +105,7 @@ if (
   packageJson.version !== packageLock.packages[''].version ||
   JSON.stringify(packageJson.dependencies) !== JSON.stringify(packageLock.packages[''].dependencies) ||
   packageJson.packageManager !== 'npm@10.9.2' ||
-  packageJson.engines.node !== '22.16.x'
+  JSON.stringify(packageJson.engines) !== JSON.stringify(packageLock.packages[''].engines)
 ) {
   throw new Error('package.json and package-lock.json are inconsistent');
 }

@@ -1,17 +1,23 @@
-# HelloHue 1.1.1 — merged ExtremeFiretop + Peter feature build
+# HelloHue 1.1.2 — merged ExtremeFiretop + Peter feature build
 
 HelloHue listens for Plex webhooks and controls Philips Hue lights. This build keeps the newer ExtremeFiretop foundation and existing behavior while porting the major features from Peter's overhaul.
+
+## 1.1.2 compatibility fix
+
+- Native installations now support Node.js 22.13.0 or newer within the Node 22 release line and npm 10.9.x.
+- Node.js 22.16.0 and npm 10.9.2 remain the recommended lockfile-generation and Docker toolchain.
+- The dependency-free core checker now validates that `package.json` and `package-lock.json` agree instead of demanding one exact Node patch version.
 
 ## 1.1.1 reliability fixes
 
 - Plex webhook thumbnails are consumed and discarded without writing files to `/tmp`.
 - Unexpected OpenSSL/DTLS termination tears down FFmpeg, color streaming, position polling, and the Hue Entertainment session.
 - The active Plex session's selected audio track is resolved and passed to FFmpeg using `-map`, including drift-correction restarts.
-- Node.js 22.16.0 and npm 10.9.2 are pinned for lockfile generation and Docker builds.
+- Node.js 22.16.0 and npm 10.9.2 are used for lockfile generation and Docker builds.
 
 ## Included features
 
-- Pinned Node.js 22.16.0 / npm 10.9.2 runtime and a freshly generated npm lockfile
+- Node.js 22 runtime compatibility, npm 10.9.x, and a freshly generated npm lockfile
 - Existing Hue light/group actions: do nothing, turn on, turn off, or dim
 - Adjustable dim brightness and transition time
 - Minimum media duration filtering, including media exactly equal to the threshold
@@ -54,7 +60,7 @@ The persisted configuration is stored in `./db/db.json` through the Compose volu
 
 Requirements:
 
-- Node.js 22.16.x with npm 10.9.x (`.nvmrc`, `packageManager`, and engine checks are included)
+- Node.js `>=22.13.0 <23` with npm `>=10.9.0 <11` (`.nvmrc` recommends Node 22.16.0)
 - FFmpeg available as `ffmpeg`
 - OpenSSL available as `openssl`
 

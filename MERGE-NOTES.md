@@ -37,3 +37,11 @@
 - Regenerates the lockfile with Node.js 22.16.0 and npm 10.9.2, matching the pinned Docker base.
 - Treats any post-handshake OpenSSL/DTLS error or exit as fatal and tears down the entire sync session.
 - Resolves the selected audio stream from the active Plex session and passes its stream mapping to every FFmpeg launch and drift restart.
+
+
+## 1.1.2 compatibility correction
+
+- Relaxes the native runtime engine requirement from one exact Node patch line to Node.js `>=22.13.0 <23`.
+- Keeps npm constrained to the compatible 10.9 release line.
+- Updates `check:core` to compare package and lockfile engine metadata instead of hardcoding Node 22.16.x.
+- Retains Node.js 22.16.0 and npm 10.9.2 as the recommended lockfile-generation and Docker toolchain.
