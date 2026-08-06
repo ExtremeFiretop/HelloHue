@@ -1,19 +1,50 @@
-# HelloHue 1.1.2 — merged ExtremeFiretop + Peter feature build
+# HelloHue 1.1.3 — merged ExtremeFiretop + Peter feature build
 
 HelloHue listens for Plex webhooks and controls Philips Hue lights. This build keeps the newer ExtremeFiretop foundation and existing behavior while porting the major features from Peter's overhaul.
 
-## 1.1.2 compatibility fix
+## Release history
+
+### 1.1.3 — documentation-history restoration
+
+- Restored the historical ExtremeFiretop 1.0.1 and 1.0.2 fix notes that were accidentally omitted when the merged README was rewritten.
+- Added the 1.1.0 merge summary so the documented release history remains continuous.
+- No runtime behavior changed from 1.1.2.
+
+### 1.1.2 — compatibility fix
 
 - Native installations now support Node.js 22.13.0 or newer within the Node 22 release line and npm 10.9.x.
 - Node.js 22.16.0 and npm 10.9.2 remain the recommended lockfile-generation and Docker toolchain.
 - The dependency-free core checker now validates that `package.json` and `package-lock.json` agree instead of demanding one exact Node patch version.
 
-## 1.1.1 reliability fixes
+### 1.1.1 — reliability fixes
 
 - Plex webhook thumbnails are consumed and discarded without writing files to `/tmp`.
 - Unexpected OpenSSL/DTLS termination tears down FFmpeg, color streaming, position polling, and the Hue Entertainment session.
 - The active Plex session's selected audio track is resolved and passed to FFmpeg using `-map`, including drift-correction restarts.
 - Node.js 22.16.0 and npm 10.9.2 are used for lockfile generation and Docker builds.
+
+### 1.1.0 — merged ExtremeFiretop + Peter feature build
+
+- Retained the Node 22 foundation, dependency lockfile, newer dependency set, transition-time controls, exact minimum-duration behavior, and optional HAmbiSync support from ExtremeFiretop.
+- Added Peter's dynamic connections, player UUID matching, improved frontend, per-connection controls, Hue Entertainment client-key creation, Entertainment Areas, and music-reactive audio analysis and colour mapping.
+- Added automatic migration from legacy `rooms` configuration to dynamic `connections`.
+- Added Entertainment failure fallback to the configured normal Hue action.
+
+### 1.0.2 — Minimum Changes to Bring to Date
+
+- Bootstrap 5 migration — All `data-toggle` attributes changed to `data-bs-toggle`, alerts now use `.btn-close` instead of `.close`, and form elements updated (for example, `.custom-select` → `.form-select`).
+- Native tab handling — Removed jQuery's `$(...).tab()` and now uses the Bootstrap `Tab` API for tab navigation.
+- Unique tab IDs — Fixed an issue causing the wrong tab to show on refresh by assigning unique IDs for links and content panes.
+- Tooltip improvements — Switched to Bootstrap 5's native `bootstrap.Tooltip` initialization instead of the jQuery approach.
+- Script ordering — Ensured jQuery is loaded before Bootstrap scripts for proper Bootstrap Select functionality.
+- Minor tweaks and refactoring — Adjusted classes, patterns, and placeholders to align with Bootstrap 5 best practices and reduce console warnings.
+
+### 1.0.1
+
+- Adjustable transition time for brightness changes.
+- Fixed minimum media duration by implementing asynchronous handling.
+- Simplified console logging.
+- General refactor of `automation.js`.
 
 ## Included features
 
