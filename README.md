@@ -1,14 +1,8 @@
-# HelloHue 1.1.3 — merged ExtremeFiretop + Peter feature build
+# HelloHue 1.1.2 — merged ExtremeFiretop + Peter feature build
 
 HelloHue listens for Plex webhooks and controls Philips Hue lights. This build keeps the newer ExtremeFiretop foundation and existing behavior while porting the major features from Peter's overhaul.
 
 ## Release history
-
-### 1.1.3 — documentation-history restoration
-
-- Restored the historical ExtremeFiretop 1.0.1 and 1.0.2 fix notes that were accidentally omitted when the merged README was rewritten.
-- Added the 1.1.0 merge summary so the documented release history remains continuous.
-- No runtime behavior changed from 1.1.2.
 
 ### 1.1.2 — compatibility fix
 
