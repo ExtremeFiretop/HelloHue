@@ -29,3 +29,11 @@
 - Plex host accepts a hostname, IP, or explicit HTTP/HTTPS URL and port
 - Malformed webhook payloads no longer throw through the route
 - Existing Hue credentials are restored when a reconnect attempt fails
+
+
+## 1.1.1 follow-up hardening
+
+- Discards Plex webhook thumbnails without creating temporary files.
+- Regenerates the lockfile with Node.js 22.16.0 and npm 10.9.2, matching the pinned Docker base.
+- Treats any post-handshake OpenSSL/DTLS error or exit as fatal and tears down the entire sync session.
+- Resolves the selected audio stream from the active Plex session and passes its stream mapping to every FFmpeg launch and drift restart.

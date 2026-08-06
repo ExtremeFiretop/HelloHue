@@ -1,4 +1,5 @@
 const { spawn } = require('child_process');
+const { EventEmitter } = require('events');
 const http = require('http');
 const logger = require('./logger');
 
@@ -15,8 +16,9 @@ function parseHueResponse(body) {
   return parsed;
 }
 
-class Entertainment {
+class Entertainment extends EventEmitter {
   constructor(bridgeIp, username, clientkey, groupId) {
+    super();
     this.bridgeIp = bridgeIp;
     this.username = username;
     this.clientkey = clientkey;
@@ -24,6 +26,8 @@ class Entertainment {
     this.dtlsProcess = null;
     this.connected = false;
     this.sequence = 0;
+    this.disconnecting = false;
+    this.fatalEmitted = false;
   }
 
   request(method, path, payload) {
@@ -98,7 +102,18 @@ class Entertainment {
       .filter(Number.isInteger);
   }
 
+  emitFatal(error) {
+    if (this.disconnecting || this.fatalEmitted) return;
+
+    this.fatalEmitted = true;
+    this.connected = false;
+    const fatalError = error instanceof Error ? error : new Error(String(error));
+    this.emit('fatal', fatalError);
+  }
+
   async connect() {
+    this.disconnecting = false;
+    this.fatalEmitted = false;
     await this.activateStreaming();
 
     try {
@@ -125,7 +140,7 @@ class Entertainment {
           }
         };
 
-        this.dtlsProcess = spawn('openssl', [
+        const process = spawn('openssl', [
           's_client',
           '-dtls1_2',
           '-psk', this.clientkey,
@@ -134,13 +149,16 @@ class Entertainment {
           '-brief'
         ], { stdio: ['pipe', 'ignore', 'pipe'] });
 
-        this.dtlsProcess.stdin.on('error', (error) => {
+        this.dtlsProcess = process;
+
+        process.stdin.on('error', (error) => {
           if (this.connected) {
             logger.error('Entertainment DTLS stream error: %s', error.message);
+            this.emitFatal(new Error(`Entertainment DTLS stream failed: ${error.message}`));
           }
         });
 
-        this.dtlsProcess.stderr.on('data', (data) => {
+        process.stderr.on('data', (data) => {
           const message = data.toString();
           stderr = (stderr + message).slice(-8000);
           const lower = stderr.toLowerCase();
@@ -165,16 +183,30 @@ class Entertainment {
           }
         });
 
-        this.dtlsProcess.on('error', (error) => {
-          finish(new Error(`Failed to start OpenSSL: ${error.message}`));
+        process.on('error', (error) => {
+          if (!settled) {
+            finish(new Error(`Failed to start OpenSSL: ${error.message}`));
+          } else {
+            this.emitFatal(new Error(`OpenSSL DTLS process error: ${error.message}`));
+          }
         });
 
-        this.dtlsProcess.on('close', (code) => {
+        process.on('close', (code, signal) => {
+          const wasConnected = this.connected;
           this.connected = false;
+          if (this.dtlsProcess === process) this.dtlsProcess = null;
+
           if (!settled) {
             finish(new Error(`OpenSSL DTLS process exited with code ${code}: ${stderr.trim()}`));
-          } else if (code !== 0 && code !== null) {
-            logger.warn('OpenSSL DTLS process exited with code %s', code);
+            return;
+          }
+
+          if (!this.disconnecting && wasConnected) {
+            const reason = signal
+              ? `signal ${signal}`
+              : `code ${code}`;
+            logger.error('OpenSSL DTLS process ended unexpectedly with %s', reason);
+            this.emitFatal(new Error(`OpenSSL DTLS process ended unexpectedly with ${reason}`));
           }
         });
       });
@@ -185,7 +217,11 @@ class Entertainment {
   }
 
   streamColors(lightColors) {
-    if (!this.connected || !this.dtlsProcess || this.dtlsProcess.killed || !this.dtlsProcess.stdin.writable) {
+    if (!this.connected || !this.dtlsProcess || this.dtlsProcess.killed) {
+      return false;
+    }
+    if (!this.dtlsProcess.stdin.writable) {
+      this.emitFatal(new Error('OpenSSL DTLS input stream is no longer writable'));
       return false;
     }
 
@@ -218,20 +254,25 @@ class Entertainment {
     ]);
 
     try {
-      return this.dtlsProcess.stdin.write(frame);
+      this.dtlsProcess.stdin.write(frame);
+      return true;
     } catch (error) {
       logger.error('Failed to send Entertainment frame: %s', error.message);
+      this.emitFatal(new Error(`Failed to send Entertainment frame: ${error.message}`));
       return false;
     }
   }
 
   async disconnect() {
+    this.disconnecting = true;
     this.connected = false;
+
     if (this.dtlsProcess) {
       const process = this.dtlsProcess;
       this.dtlsProcess = null;
       try { process.kill('SIGTERM'); } catch (error) { /* ignore */ }
     }
+
     await this.deactivateStreaming();
     logger.info('Entertainment session disconnected for group %s', this.groupId);
   }

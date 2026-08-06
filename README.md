@@ -1,10 +1,17 @@
-# HelloHue 1.1.0 — merged ExtremeFiretop + Peter feature build
+# HelloHue 1.1.1 — merged ExtremeFiretop + Peter feature build
 
 HelloHue listens for Plex webhooks and controls Philips Hue lights. This build keeps the newer ExtremeFiretop foundation and existing behavior while porting the major features from Peter's overhaul.
 
+## 1.1.1 reliability fixes
+
+- Plex webhook thumbnails are consumed and discarded without writing files to `/tmp`.
+- Unexpected OpenSSL/DTLS termination tears down FFmpeg, color streaming, position polling, and the Hue Entertainment session.
+- The active Plex session's selected audio track is resolved and passed to FFmpeg using `-map`, including drift-correction restarts.
+- Node.js 22.16.0 and npm 10.9.2 are pinned for lockfile generation and Docker builds.
+
 ## Included features
 
-- Node.js 22 runtime and a committed npm lockfile
+- Pinned Node.js 22.16.0 / npm 10.9.2 runtime and a freshly generated npm lockfile
 - Existing Hue light/group actions: do nothing, turn on, turn off, or dim
 - Adjustable dim brightness and transition time
 - Minimum media duration filtering, including media exactly equal to the threshold
@@ -27,7 +34,7 @@ Back up the `db` directory before upgrading. To use Entertainment sync after upg
 
 ## Docker installation
 
-The Docker image installs Node.js 22, FFmpeg, and OpenSSL.
+The Docker image pins Node.js 22.16.0 with npm 10.9.2 and installs FFmpeg and OpenSSL.
 
 ```bash
 docker compose up -d --build
@@ -47,7 +54,7 @@ The persisted configuration is stored in `./db/db.json` through the Compose volu
 
 Requirements:
 
-- Node.js 22 or newer
+- Node.js 22.16.x with npm 10.9.x (`.nvmrc`, `packageManager`, and engine checks are included)
 - FFmpeg available as `ffmpeg`
 - OpenSSL available as `openssl`
 
@@ -62,7 +69,13 @@ For development:
 npm run dev
 ```
 
-Run the included static and template checks with:
+Run dependency-free core checks with:
+
+```bash
+npm run check:core
+```
+
+After `npm ci`, run the complete static and template checks with:
 
 ```bash
 npm run check
@@ -79,7 +92,7 @@ npm run check
 
 ### Entertainment notes
 
-Entertainment sync decodes the Plex media source independently with FFmpeg; it does not capture audio from the playback device. Direct local playback is the most reliable case. Transcoded, remote, multi-part, or unusual stream-selection scenarios may require additional work.
+Entertainment sync decodes the Plex media source independently with FFmpeg; it does not capture audio from the playback device. Direct local playback is the most reliable case. HelloHue now maps the audio track selected in the active Plex session when Plex exposes its stream index. Transcoded, remote, or multi-part playback can still depend on what metadata and source access Plex provides.
 
 Only one controller should use a Hue Entertainment Area at a time. Create the Entertainment Area in the Hue app before selecting it in HelloHue.
 

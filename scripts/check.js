@@ -4,6 +4,7 @@ const { spawnSync } = require('child_process');
 const { Liquid } = require('liquidjs');
 const { parsePlexEndpoint } = require('../src/plex-endpoint');
 const { migrateData } = require('../src/db-migration');
+const { resolvePlexMediaSource } = require('../src/plex-media');
 
 const root = path.resolve(__dirname, '..');
 const ignored = new Set(['node_modules', 'db', '.git']);
@@ -37,6 +38,52 @@ for (const [input, protocol, port] of endpoints) {
   }
 }
 
+const selectedAudio = resolvePlexMediaSource(
+  {
+    Media: [{
+      selected: true,
+      Part: [{
+        id: 10,
+        key: '/library/parts/10/file.mkv',
+        Stream: [
+          { streamType: 1, index: 0, codec: 'h264' },
+          { streamType: 2, index: 1, codec: 'aac', language: 'English' },
+          { streamType: 2, index: 2, codec: 'ac3', language: 'French', selected: true }
+        ]
+      }]
+    }]
+  },
+  null,
+  null
+);
+if (!selectedAudio || selectedAudio.audioMap !== '0:2' || selectedAudio.audioStream.language !== 'French') {
+  throw new Error('Selected Plex audio-stream mapping check failed');
+}
+
+const relativeAudio = resolvePlexMediaSource(
+  {
+    Media: [{
+      Part: [{
+        key: '/library/parts/11/file.mkv',
+        Stream: [
+          { streamType: 2, codec: 'aac' },
+          { streamType: 2, codec: 'ac3', selected: true }
+        ]
+      }]
+    }]
+  },
+  null,
+  null
+);
+if (!relativeAudio || relativeAudio.audioMap !== '0:a:1') {
+  throw new Error('Relative Plex audio-stream mapping check failed');
+}
+
+const webhookSource = fs.readFileSync(path.join(root, 'routes', 'webhook.js'), 'utf8');
+if (!webhookSource.includes('memoryStorage()') || webhookSource.includes("dest: '/tmp/'")) {
+  throw new Error('Webhook thumbnail storage check failed');
+}
+
 
 const migrated = migrateData({
   rooms: [{ id: 2, name: 'Legacy Room', dim_transition: 7, hambisync: true }],
@@ -56,7 +103,9 @@ const packageJson = require('../package.json');
 const packageLock = require('../package-lock.json');
 if (
   packageJson.version !== packageLock.packages[''].version ||
-  JSON.stringify(packageJson.dependencies) !== JSON.stringify(packageLock.packages[''].dependencies)
+  JSON.stringify(packageJson.dependencies) !== JSON.stringify(packageLock.packages[''].dependencies) ||
+  packageJson.packageManager !== 'npm@10.9.2' ||
+  packageJson.engines.node !== '22.16.x'
 ) {
   throw new Error('package.json and package-lock.json are inconsistent');
 }

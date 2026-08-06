@@ -3,9 +3,16 @@ const multer = require('multer');
 const processWebhook = require('../src/automation');
 const logger = require('../src/logger');
 
+// Plex includes an optional thumbnail in multipart webhooks. HelloHue only needs
+// the JSON payload, so consume and discard files instead of writing them to /tmp.
 const upload = multer({
-  dest: '/tmp/',
-  limits: { fileSize: 5 * 1024 * 1024 }
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, callback) => callback(null, false),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1,
+    fields: 20
+  }
 });
 
 router.post('/', upload.single('thumb'), (req, res) => {

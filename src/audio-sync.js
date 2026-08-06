@@ -5,6 +5,7 @@ const Entertainment = require('./entertainment');
 const db = require('./db');
 const logger = require('./logger');
 const { parsePlexEndpoint } = require('./plex-endpoint');
+const { resolvePlexMediaSource } = require('./plex-media');
 
 // Active sync sessions keyed by connection id
 const activeSessions = {};
@@ -33,8 +34,8 @@ async function startSync(connection, payload) {
 
     let entertainment;
     try {
-        const streamUrl = await getPlexStreamUrl(plexConfig, payload);
-        if (!streamUrl) {
+        const mediaSource = await getPlexMediaSource(plexConfig, payload);
+        if (!mediaSource || !mediaSource.streamUrl) {
             logger.error('Could not determine Plex stream URL for connection %s', connection.name);
             return false;
         }
@@ -51,6 +52,22 @@ async function startSync(connection, payload) {
             logger.error('No lights in Entertainment area %s', connection.entertainment_group);
             return false;
         }
+
+        let pendingEntertainmentFailure = null;
+        const onEntertainmentFatal = (error) => {
+            pendingEntertainmentFailure = error;
+            logger.error(
+                'Entertainment transport failed for connection %s: %s',
+                connection.name,
+                error.message
+            );
+            if (activeSessions[connectionId]) {
+                stopSync(connectionId).catch(stopError => {
+                    logger.error('Failed to stop broken Entertainment session: %s', stopError.message);
+                });
+            }
+        };
+        entertainment.once('fatal', onEntertainmentFatal);
 
         await entertainment.connect();
 
@@ -72,7 +89,9 @@ async function startSync(connection, payload) {
             reactiveness,
             analyzer: new AudioAnalyzer(reactiveness),
             // FFmpeg state (managed by launchFFmpeg / killFFmpeg)
-            streamUrl,
+            streamUrl: mediaSource.streamUrl,
+            audioMap: mediaSource.audioMap,
+            audioStream: mediaSource.audioStream,
             ffmpeg: null,
             pcmBuffer: Buffer.alloc(0),
             // Position tracking
@@ -84,10 +103,30 @@ async function startSync(connection, payload) {
             playerTitle: (payload && payload.Player && payload.Player.title) || null,
             // Intervals
             streamInterval: null,
-            positionInterval: null
+            positionInterval: null,
+            onEntertainmentFatal
         };
 
         activeSessions[connectionId] = session;
+        if (pendingEntertainmentFailure) {
+            throw pendingEntertainmentFailure;
+        }
+
+        if (session.audioMap) {
+            const streamDescription = session.audioStream && (
+                session.audioStream.title ||
+                session.audioStream.language ||
+                session.audioStream.codec
+            );
+            logger.info(
+                'Using Plex audio stream %s (%s) for connection %s',
+                session.audioMap,
+                streamDescription || 'selected track',
+                connection.name
+            );
+        } else {
+            logger.warn('Plex did not expose an audio stream index; FFmpeg will use its default audio stream');
+        }
 
         // 1. Launch FFmpeg at the Plex-reported offset
         await launchFFmpeg(session, viewOffset, true);
@@ -103,7 +142,12 @@ async function startSync(connection, payload) {
             const analysis = session.analyzer.getLatest();
             if (analysis) {
                 const colors = mapToColors(analysis, session.lightIds, session.brightnessCeiling, session.palette);
-                session.entertainment.streamColors(colors);
+                const streamed = session.entertainment.streamColors(colors);
+                if (!streamed && !session.entertainment.connected && activeSessions[connectionId] === session) {
+                    stopSync(connectionId).catch(error => {
+                        logger.error('Failed to stop disconnected Entertainment session: %s', error.message);
+                    });
+                }
             }
         }, 40);
 
@@ -139,6 +183,9 @@ async function stopSync(connectionId) {
     killFFmpeg(session);
 
     if (session.entertainment) {
+        if (session.onEntertainmentFatal) {
+            session.entertainment.removeListener('fatal', session.onEntertainmentFatal);
+        }
         try { await session.entertainment.disconnect(); } catch (e) { /* ignore */ }
     }
 
@@ -165,8 +212,11 @@ function launchFFmpeg(session, offsetMs, waitForAudio = false) {
     if (seekSec > 1) {
         args.push('-ss', seekSec.toFixed(3));
     }
+    args.push('-i', session.streamUrl);
+    if (session.audioMap) {
+        args.push('-map', session.audioMap);
+    }
     args.push(
-        '-i', session.streamUrl,
         '-vn',
         '-f', 's16le',
         '-acodec', 'pcm_s16le',
@@ -315,7 +365,8 @@ async function getPlexSessionOffset(plexConfig, playerUuid, playerTitle) {
             `/status/sessions?X-Plex-Token=${encodeURIComponent(plexConfig.token)}`
         );
         const sessions = (data.MediaContainer && data.MediaContainer.Metadata) || [];
-        const match = sessions.find(session => {
+        const sessionList = Array.isArray(sessions) ? sessions : [sessions];
+        const match = sessionList.find(session => {
             if (!session.Player) return false;
             if (playerUuid && session.Player.machineIdentifier === playerUuid) return true;
             return Boolean(playerTitle && session.Player.title === playerTitle);
@@ -329,28 +380,57 @@ async function getPlexSessionOffset(plexConfig, playerUuid, playerTitle) {
 
 // ─── Plex stream URL resolution ───────────────────────────────────────────────
 
-async function getPlexStreamUrl(plexConfig, payload) {
+async function getPlexActiveSessionMetadata(plexConfig, payload) {
+    if (!payload || !payload.Player) return null;
+
+    try {
+        const data = await plexRequestJson(
+            plexConfig,
+            `/status/sessions?X-Plex-Token=${encodeURIComponent(plexConfig.token)}`
+        );
+        const sessions = (data.MediaContainer && data.MediaContainer.Metadata) || [];
+        const sessionList = Array.isArray(sessions) ? sessions : [sessions];
+        const playerUuid = payload.Player.uuid;
+        const playerTitle = payload.Player.title;
+
+        return sessionList.find(session => {
+            if (!session || !session.Player) return false;
+            const sessionUuid = session.Player.machineIdentifier || session.Player.uuid;
+            if (playerUuid && sessionUuid) return sessionUuid === playerUuid;
+            return Boolean(playerTitle && session.Player.title === playerTitle);
+        }) || null;
+    } catch (error) {
+        logger.warn('Could not query the active Plex session for audio-track selection: %s', error.message);
+        return null;
+    }
+}
+
+async function getPlexMediaSource(plexConfig, payload) {
     if (!payload || !payload.Metadata || !payload.Metadata.key) {
         return null;
     }
 
     try {
+        const activeMetadata = await getPlexActiveSessionMetadata(plexConfig, payload);
         const separator = payload.Metadata.key.includes('?') ? '&' : '?';
         const data = await plexRequestJson(
             plexConfig,
             `${payload.Metadata.key}${separator}X-Plex-Token=${encodeURIComponent(plexConfig.token)}`
         );
-        const metadata = data.MediaContainer && data.MediaContainer.Metadata && data.MediaContainer.Metadata[0];
-        const mediaList = metadata && Array.isArray(metadata.Media) ? metadata.Media : [];
-        const media = mediaList.find(item => item.selected) || mediaList[0];
-        const parts = media && Array.isArray(media.Part) ? media.Part : [];
-        const part = parts.find(item => item.selected) || parts[0];
-        if (!part || !part.key) return null;
+        const itemMetadata = data.MediaContainer && data.MediaContainer.Metadata;
+        const item = Array.isArray(itemMetadata) ? itemMetadata[0] : itemMetadata;
+        const resolved = resolvePlexMediaSource(activeMetadata, payload.Metadata, item);
+        if (!resolved || !resolved.partKey) return null;
 
         const endpoint = parsePlexEndpoint(plexConfig);
-        const streamUrl = new URL(part.key, `${endpoint.baseUrl}/`);
+        const streamUrl = new URL(resolved.partKey, `${endpoint.baseUrl}/`);
         streamUrl.searchParams.set('X-Plex-Token', plexConfig.token);
-        return streamUrl.toString();
+
+        return {
+            streamUrl: streamUrl.toString(),
+            audioMap: resolved.audioMap,
+            audioStream: resolved.audioStream
+        };
     } catch (error) {
         logger.error('Failed to resolve Plex media stream: %s', error.message);
         return null;
@@ -541,4 +621,9 @@ function mapToColors(analysis, lightIds, brightnessCeiling, palette) {
     return mapToColors(analysis, lightIds, brightnessCeiling, 'auto');
 }
 
-module.exports = { startSync, stopSync, stopAll };
+module.exports = {
+    startSync,
+    stopSync,
+    stopAll,
+    _internal: { getPlexMediaSource, getPlexActiveSessionMetadata }
+};

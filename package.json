@@ -1,18 +1,21 @@
 {
   "name": "hellohue",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Sync Philips Hue lights with Plex, including transitions, HAmbiSync, and Hue Entertainment music sync.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon --ignore 'db/db.json' index.js",
-    "check": "node scripts/check.js"
+    "check": "node scripts/check.js",
+    "check:core": "node scripts/check-core.js"
   },
   "author": "ExtremeFiretop",
   "license": "ISC",
   "engines": {
-    "node": ">=22"
+    "node": "22.16.x",
+    "npm": "10.9.x"
   },
+  "packageManager": "npm@10.9.2",
   "dependencies": {
     "@popperjs/core": "^2.11.8",
     "body-parser": "^1.18.3",
