@@ -1,4 +1,7 @@
 node_modules
 npm-debug.log
-db.json
+db/
 .DS_Store
+.git
+.gitignore
+*.zip

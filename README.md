@@ -1,151 +1,104 @@
-# HelloHue 
+# HelloHue 1.1.0 — merged ExtremeFiretop + Peter feature build
 
-## Updates in 1.0.2 - Minimum Changes to Bring to Date
+HelloHue listens for Plex webhooks and controls Philips Hue lights. This build keeps the newer ExtremeFiretop foundation and existing behavior while porting the major features from Peter's overhaul.
 
- - Bootstrap 5 migration – All data-toggle attributes changed to data-bs-toggle, alerts now use .btn-close instead of .close, and form elements updated (e.g., .custom-select → .form-select).
- - Native tab handling – Removed jQuery’s $(...).tab(), now uses the new bootstrap.Tab API for tab navigation.
- - Unique tab IDs – Fixed an issue causing the wrong tab to show on refresh by assigning unique IDs for links and content panes.
- - Tooltip improvements – Switched to Bootstrap 5’s native bootstrap.Tooltip initialization instead of the jQuery approach.
- - Script ordering – Ensured jQuery is loaded before Bootstrap scripts for proper Bootstrap Select functionality.
- - Minor tweaks & refactoring – Adjusted classes, patterns, and placeholders to align with Bootstrap 5 best practices and reduce console warnings.
+## Included features
 
-## Updates in 1.0.1
+- Node.js 22 runtime and a committed npm lockfile
+- Existing Hue light/group actions: do nothing, turn on, turn off, or dim
+- Adjustable dim brightness and transition time
+- Minimum media duration filtering, including media exactly equal to the threshold
+- Night-only rules based on latitude/longitude
+- Existing HAmbiSync configuration and per-connection start/stop option
+- Dynamic connections that can be added and deleted
+- Plex player UUID matching, with player-name fallback
+- Per-connection status, enable, and disable API endpoints
+- Modern Bootstrap 5 interface without jQuery
+- Native Hue Entertainment music-reactive lighting using FFmpeg and OpenSSL DTLS
+- Entertainment palettes, reactiveness, and brightness ceiling
+- Plex playback-position polling and FFmpeg drift correction
+- Automatic fallback to the configured normal light action if Entertainment sync cannot start
 
- - Adjustable transition time for brightness changes
- - Fixed minimum media duration by implementing async handling
- - Simplified console logging
- - General refactor of `automation.js`
+## Upgrade behavior
 
-##### Sync Philips Hue lights with Plex!
+Existing `db/db.json` files using the old `rooms` array are migrated automatically to dynamic `connections`. Existing transition times, HAmbiSync options, light/group selections, duration rules, and night-mode settings are retained.
 
-**Requirements**
+Back up the `db` directory before upgrading. To use Entertainment sync after upgrading, reconnect the Hue Bridge once so HelloHue can obtain the Hue `clientkey`. Press the physical bridge button first.
 
- - A Plex Pass subscription
- - A computer with Git / Node 22 / NPM 8
- 
-### Warning
+## Docker installation
 
-This app is the standalone equivalent of the [HelloHue.bundle](https://github.com/ledge74/HelloHue.bundle) Plex Plugin. This is not a Plex Plugin, as Plugins will be deprecated soon.
+The Docker image installs Node.js 22, FFmpeg, and OpenSSL.
 
-### Behavior
+```bash
+docker compose up -d --build
+```
 
-This application detects when a media is playing, paused or stopped on your Plex Clients. Then it checks the client name, and the user who owns the stream. If it matches your criteria, it triggers your lights with the actions you have set up.
+Open `http://SERVER-IP:4568`.
 
-### Installation with Node
+Set a strong session secret before exposing the interface outside a trusted LAN:
 
- 1. `git clone https://github.com/ExtremeFiretop/HelloHue.git`
- 2. `cd HelloHue`
- 3. `npm i`
- 4. `npm start`
+```bash
+SESSION_SECRET="replace-with-a-long-random-value" docker compose up -d --build
+```
 
-### Configure Plex Webhook
+The persisted configuration is stored in `./db/db.json` through the Compose volume.
 
-Plex needs to send webhooks to HelloHue in order for the channel to work. For example, if HelloHue uses the default port and is on the same machine as your Plex Media Server, the webhook url will be :
-`http://127.0.0.1:4568/`
+## Native Node.js installation
 
-Read [this support article](https://support.plex.tv/articles/115002267687-webhooks/) in order to learn how to create a Plex webhook
+Requirements:
 
-### Configure HelloHue
+- Node.js 22 or newer
+- FFmpeg available as `ffmpeg`
+- OpenSSL available as `openssl`
 
- - In a browser, go the HelloHue app url, for example `http://127.0.0.1:4568/` if you are on the machine that runs HelloHue.
- 1. Configure everything : Hue bridge, Plex server, Location.
- 2. Then configure your Rooms. One room is composed of **one Player**, **one or multiple User(s)** and **one or multiple Hue Lights/Groups**. Below is some additional details about the most important settings :
-	 - `Plex Player name` you can find your Plex Players in your Plex Media Server -> settings -> Authorized devices. Only put ONE client per room. If your have two clients in the same room, activate an other room and fill the settings with the other clients name and the same lights names.
-	 - `Plex Users names` you can find the list of users in Plex Media Server -> settings -> home users. You can put multiple users (comma separated values, case sensitive).
-	 - You need to tick `Activate this room` in order for light actions to get triggered.
+```bash
+npm ci
+npm start
+```
 
-### HelloHue api
+For development:
 
-Three endpoints are available. You may use them to integrate with [homebridge](https://github.com/nfarina/homebridge) or [home-assistant](https://www.home-assistant.io/) for example :
+```bash
+npm run dev
+```
 
- - `GET /api/start`
- - `GET /api/stop`
- - `GET /api/status`
-	 - Returns `1` if HelloHue is started
-	 - Returns `0` if HelloHue is stopped
+Run the included static and template checks with:
 
-### Example docker-compose file
+```bash
+npm run check
+```
 
-HelloHue is also available as a [Docker image](https://hub.docker.com/r/ledge74/hellohue/)
+## Configuration
 
-    version: "3"
-    
-    services:
-      hellohue:
-        container_name: hellohue
-        volumes:
-          - ./hellohue:/app/db
-        ports:
-          - "4568:4568"
-        environment:
-          - TZ=Europe/Paris
-        network_mode: host
-        restart: unless-stopped
+1. **Hue Bridge:** press the bridge button and connect. Reconnecting creates both the regular username and Entertainment client key.
+2. **Plex Server:** enter a hostname, IP, or full URL plus the Plex token. Port `32400` is assumed when omitted.
+3. **Location:** optional; required only for night-only rules.
+4. **HAmbiSync:** optional compatibility integration.
+5. **Connections:** choose the Plex player, users, lights/groups, actions, transitions, and optional Entertainment Area.
+6. Add the HelloHue webhook URL in Plex: `http://HELLOHUE-IP:4568/`.
 
-### Example homebridge-http integration
-Integrate with [homebridge](https://github.com/nfarina/homebridge) and [homebridge-http](https://github.com/rudders/homebridge-http)
+### Entertainment notes
 
-	{
-        	"accessory": "Http",
-        	"name": "HelloHue",
-        	"switchHandling": "yes",
-        	"http_method": "GET",
-        	"on_url":      "http://127.0.0.1:4568/api/start",
-        	"off_url":     "http://127.0.0.1:4568/api/stop",
-        	"status_url":  "http://127.0.0.1:4568/api/status",
-        	"service": "Switch",
-        	"brightnessHandling": "no",
-        	"brightness_url":     "http://localhost/controller/1707/%b",
-        	"brightnesslvl_url":  "http://localhost/status/100054",
-        	"sendimmediately": "",
-        	"username" : "",
-        	"password" : ""                     
-	},
+Entertainment sync decodes the Plex media source independently with FFmpeg; it does not capture audio from the playback device. Direct local playback is the most reliable case. Transcoded, remote, multi-part, or unusual stream-selection scenarios may require additional work.
 
-### Example Home-Assistant integration
+Only one controller should use a Hue Entertainment Area at a time. Create the Entertainment Area in the Hue app before selecting it in HelloHue.
 
-    - platform: command_line
-      switches:
-        hellohue:
-          command_on: "/usr/bin/curl -X GET http://127.0.0.1:4568/api/start"
-          command_off: "/usr/bin/curl -X GET http://127.0.0.1:4568/api/stop"
-          command_state: "/usr/bin/curl -X GET http://127.0.0.1:4568/api/status"
-          value_template: '{{ value == "1" }}'
-          friendly_name: HelloHue
-	  
-	  
-### Example of Systemd Autostart
+## HTTP API
 
-		sudo nano /etc/systemd/system/hellohue.service 
-	
-with the following Content
+Global status:
 
-		[Unit]
-		Description=HelloHue
-		After=network.target
+- `GET /api/status`
+- `GET` or `POST /api/start`
+- `GET` or `POST /api/stop`
 
-		[Service]
-		Environment=NODE_PORT=4568
-		Type=simple
-		User=pi
-		WorkingDirectory=/home/pi/HelloHueMod/
-		ExecStart=/usr/local/bin/node index.js
-		Restart=on-failure
+Per connection:
 
-		[Install]
-		WantedBy=multi-user.target
-		
-Enable Systemctl
-		
-		systemctl enable hellohue.service
-		
-	
-Check Status of Systemctl
+- `GET /api/connection/:id/status`
+- `GET` or `POST /api/connection/:id/enable`
+- `GET` or `POST /api/connection/:id/disable`
 
-		systemctl status hellohue.service
+Responses use plain text: `1` for active/enabled and `0` for inactive/disabled.
 
+## Security
 
-### Support the project
-I've modified HelloHue
-if you want to donate please go to the original page
-https://github.com/ledge74/HelloHue
+HelloHue is designed primarily for a trusted home network. The compatibility API permits state changes through GET requests and does not include user authentication. Use a reverse proxy with authentication when access is required beyond the LAN.

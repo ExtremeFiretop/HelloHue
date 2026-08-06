@@ -1,13 +1,12 @@
-version: "3"
-
 services:
   hellohue:
-    container_name: hellohue-dev
+    container_name: hellohue
     build: .
-    command: "npm run dev"
     volumes:
-      - ./:/app
+      - ./db:/app/db
     ports:
       - "4568:4568"
     environment:
-      - TZ=Europe/Paris
+      TZ: ${TZ:-America/Toronto}
+      SESSION_SECRET: ${SESSION_SECRET:-hellohue-change-this-secret}
+    restart: unless-stopped

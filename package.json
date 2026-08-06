@@ -1,17 +1,18 @@
 {
   "name": "hellohue",
-  "version": "1.0.2",
-  "description": "Sync your Philips Hue lights with Plex!",
+  "version": "1.1.0",
+  "description": "Sync Philips Hue lights with Plex, including transitions, HAmbiSync, and Hue Entertainment music sync.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "./node_modules/nodemon/bin/nodemon.js --ignore 'db.json'",
-    "docker-build": "rm -rf node_modules && npm i --production && docker-build",
-    "docker-run": "docker-run",
-    "docker-push": "docker-push"
+    "dev": "nodemon --ignore 'db/db.json' index.js",
+    "check": "node scripts/check.js"
   },
   "author": "ExtremeFiretop",
   "license": "ISC",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
     "body-parser": "^1.18.3",

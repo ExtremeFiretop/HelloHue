@@ -1,124 +1,21 @@
-const low = require('lowdb')
-const FileSync = require('lowdb/adapters/FileSync')
 const fs = require('fs');
-const dir = './db';
+const path = require('path');
+const low = require('lowdb');
+const FileSync = require('lowdb/adapters/FileSync');
+const { connectionDefaults, migrateData } = require('./db-migration');
 
-if (!fs.existsSync(dir)){
-    fs.mkdirSync(dir);
+const dir = path.resolve('./db');
+const dbPath = path.join(dir, 'db.json');
+const isNewDatabase = !fs.existsSync(dbPath);
+
+if (!fs.existsSync(dir)) {
+  fs.mkdirSync(dir, { recursive: true });
 }
 
-const adapter = new FileSync('./db/db.json')
-const db = low(adapter)
-
-db.defaults({
-    "rooms": [
-        {
-            "id": 1,
-            "active": false,
-            "name": "Room 1",
-            "player": "",
-            "users": [],
-            "play": "nothing",
-            "pause": "nothing",
-            "resume": "nothing",
-            "stop": "nothing",
-            "lights": [],
-            "groups": [],
-            "dim_brightness": 127,
-            "dim_transition": 1,
-            "hambisync": false,
-            "night_mode": false,
-            "min_duration": 0
-        },
-        {
-            "id": 2,
-            "active": false,
-            "name": "Room 2",
-            "player": "",
-            "users": [],
-            "play": "nothing",
-            "pause": "nothing",
-            "resume": "nothing",
-            "stop": "nothing",
-            "lights": [],
-            "groups": [],
-            "dim_brightness": 127,
-            "dim_transition": 1,
-            "hambisync": false,
-            "night_mode": false,
-            "min_duration": 0
-        },
-        {
-            "id": 3,
-            "active": false,
-            "name": "Room 3",
-            "player": "",
-            "users": [],
-            "play": "nothing",
-            "pause": "nothing",
-            "resume": "nothing",
-            "stop": "nothing",
-            "lights": [],
-            "groups": [],
-            "dim_brightness": 127,
-            "dim_transition": 1,
-            "hambisync": false,
-            "night_mode": false,
-            "min_duration": 0
-        },
-        {
-            "id": 4,
-            "active": false,
-            "name": "Room 4",
-            "player": "",
-            "users": [],
-            "play": "nothing",
-            "pause": "nothing",
-            "resume": "nothing",
-            "stop": "nothing",
-            "lights": [],
-            "groups": [],
-            "dim_brightness": 127,
-            "dim_transition": 1,
-            "hambisync": false,
-            "night_mode": false,
-            "min_duration": 0
-        },
-        {
-            "id": 5,
-            "active": false,
-            "name": "Room 5",
-            "player": "",
-            "users": [],
-            "play": "nothing",
-            "pause": "nothing",
-            "resume": "nothing",
-            "stop": "nothing",
-            "lights": [],
-            "groups": [],
-            "dim_brightness": 127,
-            "dim_transition": 1,
-            "hambisync": false,
-            "night_mode": false,
-            "min_duration": 0
-        }
-    ],
-    "hue": {
-        "username": "",
-        "host": ""
-    },
-    "location": {
-        "latitude": "",
-        "longitude": ""
-    },
-    "plex": {
-        "host": "",
-        "token": ""
-    },
-    "hambisync": {
-        "host": "",
-        "port": ""
-    }
-}).write()
+const adapter = new FileSync(dbPath);
+const db = low(adapter);
+const migrated = migrateData(db.getState(), isNewDatabase);
+db.setState(migrated).write();
 
 module.exports = db;
+module.exports.connectionDefaults = connectionDefaults;

@@ -1,0 +1,316 @@
+:root {
+  --hh-primary: #6366f1;
+  --hh-primary-hover: #4f46e5;
+  --hh-sidebar-bg: #1e293b;
+  --hh-sidebar-text: #94a3b8;
+  --hh-content-bg: #f1f5f9;
+  --hh-card-bg: #ffffff;
+  --hh-border: #e2e8f0;
+}
+
+body {
+  background: var(--hh-content-bg);
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ─── Sidebar ─── */
+
+.sidebar {
+  background: var(--hh-sidebar-bg) !important;
+  border-right: none !important;
+  width: 280px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 992px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+}
+
+.sidebar .brand {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar .brand-icon {
+  font-size: 1.5rem;
+}
+
+.sidebar .brand-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.nav-section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  padding: 0.5rem 0;
+}
+
+.sidebar .nav-link {
+  color: var(--hh-sidebar-text);
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+  font-size: 0.9rem;
+}
+
+.sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+}
+
+.sidebar .nav-link.active {
+  background: var(--hh-primary);
+  color: #fff;
+}
+
+.sidebar .nav-link.active .status-dot {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-actions {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 1rem;
+}
+
+/* ─── Mobile navbar ─── */
+
+.mobile-nav {
+  background: var(--hh-sidebar-bg);
+}
+
+/* ─── Status dots ─── */
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-dot.success {
+  background: #22c55e;
+}
+
+.status-dot.warning {
+  background: #f59e0b;
+}
+
+.status-dot.danger {
+  background: #ef4444;
+}
+
+/* ─── Main content ─── */
+
+.main-content {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  min-width: 0;
+  max-width: 920px;
+}
+
+@media (max-width: 991.98px) {
+  .main-content {
+    padding: 1rem;
+    max-width: 100%;
+  }
+}
+
+/* ─── Content cards ─── */
+
+.content-card {
+  background: var(--hh-card-bg);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  padding: 2rem;
+}
+
+@media (max-width: 575.98px) {
+  .content-card {
+    padding: 1.25rem;
+  }
+}
+
+.content-card h4 {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 1.25rem;
+}
+
+/* ─── Toggle switches ─── */
+
+.form-switch .form-check-input {
+  width: 2.75em;
+  height: 1.4em;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.form-switch .form-check-input:checked {
+  background-color: var(--hh-primary);
+  border-color: var(--hh-primary);
+}
+
+.form-switch .form-check-input:focus {
+  border-color: var(--hh-primary);
+  box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+}
+
+.form-check-label {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ─── Buttons ─── */
+
+.btn-primary {
+  background-color: var(--hh-primary);
+  border-color: var(--hh-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:active {
+  background-color: var(--hh-primary-hover);
+  border-color: var(--hh-primary-hover);
+}
+
+.btn-primary:focus {
+  box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+}
+
+.btn-outline-primary {
+  color: var(--hh-primary);
+  border-color: var(--hh-primary);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--hh-primary);
+  border-color: var(--hh-primary);
+}
+
+/* ─── Multi-select dropdown ─── */
+
+.multi-select .dropdown-menu {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--hh-border);
+}
+
+.multi-select .dropdown-item {
+  cursor: pointer;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.multi-select .dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+.multi-select .dropdown-item:active,
+.multi-select .dropdown-item:focus {
+  background: #f1f5f9;
+  color: inherit;
+}
+
+.multi-select .form-check-input {
+  cursor: pointer;
+}
+
+.multi-select .form-select {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ─── Range sliders ─── */
+
+.form-range::-webkit-slider-thumb {
+  background: var(--hh-primary);
+}
+
+.form-range::-moz-range-thumb {
+  background: var(--hh-primary);
+}
+
+.form-range:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+}
+
+.range-value {
+  font-weight: 600;
+  color: var(--hh-primary);
+  font-size: 0.875rem;
+}
+
+/* ─── Alerts ─── */
+
+.alert {
+  border-radius: 0.5rem;
+  border: none;
+  font-size: 0.9rem;
+}
+
+/* ─── Section dividers ─── */
+
+.section-divider {
+  border-top: 1px solid var(--hh-border);
+  margin: 1.5rem 0;
+}
+
+/* ─── API endpoint badges ─── */
+
+.api-endpoint {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+  background: #f1f5f9;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.2rem;
+  color: #475569;
+  margin-bottom: 2px;
+}
+
+/* ─── Form labels ─── */
+
+.form-label {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #334155;
+  margin-bottom: 0.35rem;
+}
+
+.form-text {
+  font-size: 0.8rem;
+}
+
+/* ─── Badges ─── */
+
+.badge {
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+/* ─── Section headers ─── */
+
+.section-header {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

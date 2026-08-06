@@ -1,11 +1,13 @@
-FROM node:22
+FROM node:22-alpine
+
+RUN apk add --no-cache ffmpeg openssl
 
 WORKDIR /app
 
-COPY package.json /app
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
-COPY . /app
+COPY . .
 
 EXPOSE 4568
 

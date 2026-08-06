@@ -1,177 +1,189 @@
 const router = require('express').Router();
-const huejay = require('huejay');
 const hue = require('../src/hue');
 const plex = require('../src/plex');
 const db = require('../src/db');
 const logger = require('../src/logger');
+const audioSync = require('../src/audio-sync');
+const { connectionDefaults } = require('../src/db');
 
+const ACTIONS = new Set(['nothing', 'turn_on', 'turn_off', 'dim']);
+const PALETTES = new Set([
+  'auto', 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink',
+  'warm', 'cool', 'sunset', 'ocean', 'forest', 'party'
+]);
 
-router.post('/room/:id', function (req, res) {
-    const id = parseInt(req.params.id);
+function clampInteger(value, fallback, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
+}
 
-    let hambisync = false;
-    let night_mode = false;
-    let active = false;
-    let dim_brightness = 0;
-    let dim_transition = 0;
-    let users = [];
-    let lights = [];
-    let groups = [];
-    let min_duration = 0;
+function parseIdList(value) {
+  if (value === undefined || value === null || value === '') return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values
+    .map(item => Number.parseInt(item, 10))
+    .filter(Number.isInteger);
+}
 
-    if (req.body.hambisync) {
-        hambisync = true;
-    }
+function parseUsers(value) {
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map(user => user.trim())
+    .filter(Boolean);
+}
 
-    if (req.body.night_mode) {
-        night_mode = true;
-    }
+function actionOrDefault(value) {
+  return ACTIONS.has(value) ? value : 'nothing';
+}
 
-    if (req.body.active) {
-        active = true;
-    }
+router.post('/connection/add', (req, res) => {
+  const connections = db.get('connections').value() || [];
+  const maxId = connections.reduce((max, connection) => Math.max(max, Number(connection.id) || 0), 0);
+  const id = maxId + 1;
 
-    if (req.body.users) {
-        users = req.body.users.split(",").map(function(user) {
-            return user.trim();
-        });
-    }
+  db.get('connections').push({
+    id,
+    ...connectionDefaults,
+    name: `Connection ${id}`
+  }).write();
 
-    if (req.body.lights) {
-        typeof req.body.lights === "string" ? req.body.lights = [req.body.lights] : req.body.lights = req.body.lights;
-        lights = req.body.lights.map(function(light) {
-            return parseInt(light);
-        });
-    }
-    
-    if (req.body.groups) {
-        typeof req.body.groups === "string" ? req.body.groups = [req.body.groups] : req.body.groups = req.body.groups;
-        groups = req.body.groups.map(function(group) {
-            return parseInt(group);
-        });
-    }
-
-    if (req.body.dim_brightness) {
-        dim_brightness = parseInt(req.body.dim_brightness);
-    }
-
-    if (req.body.dim_transition) {
-        dim_transition = parseInt(req.body.dim_transition);
-    }
-
-    if (req.body.min_duration) {
-        min_duration = parseInt(req.body.min_duration);
-    }
-
-    const room = {
-        name: req.body.name.trim(),
-        player: req.body.player.trim(),
-        play: req.body.play,
-        pause: req.body.pause,
-        resume: req.body.resume,
-        stop: req.body.stop,
-        hambisync,
-        night_mode,
-        active,
-        groups,
-        lights,
-        users,
-        dim_brightness,
-        dim_transition,
-        min_duration
-    };
-
-    db.get('rooms')
-        .find({ id: id })
-        .assign(room)
-        .write()
-
-    req.flash('success', 'Room saved !');
-    res.redirect(`/#form-room${id}`);
+  req.flash('success', 'Connection added!');
+  res.redirect(`/#form-connection${id}`);
 });
 
-router.post('/location', function (req, res) {
-    let coordinates = {
-        latitude: "",
-        longitude: ""
-    }
-    if (req.body.latitude && req.body.longitude) {
-        coordinates = {
-            latitude: parseFloat(req.body.latitude),
-            longitude: parseFloat(req.body.longitude)
-        }
-    }
-    db.set('location', coordinates).write();
-    req.flash('success', 'Location saved !');
-    res.redirect('/#form-location');
+router.post('/connection/:id/delete', async (req, res) => {
+  const id = Number.parseInt(req.params.id, 10);
+  const connection = db.get('connections').find({ id }).value();
+  if (!connection) {
+    req.flash('error', 'Connection not found.');
+    return res.redirect('/');
+  }
+
+  await audioSync.stopSync(id);
+  db.get('connections').remove({ id }).write();
+  req.flash('success', 'Connection deleted!');
+  return res.redirect('/');
 });
 
-router.post('/plex', function (req, res) {
-    let plexConfig = {
-        host: "",
-        token: ""
-    }
+router.post('/connection/:id', async (req, res) => {
+  const id = Number.parseInt(req.params.id, 10);
+  const chain = db.get('connections').find({ id });
+  const previous = chain.value();
+  if (!previous) {
+    req.flash('error', 'Connection not found.');
+    return res.redirect('/');
+  }
 
-    if (req.body.host && req.body.token) {
-        plexConfig.host = req.body.host;
-        plexConfig.token = req.body.token;
-    }
-    db.set('plex', plexConfig).write();
-    plex.authenticate();
-    plex.isAuthenticated();
-    req.flash('success', 'Plex saved !');
-    res.redirect('/#form-plex');
+  const connection = {
+    name: String(req.body.name || `Connection ${id}`).trim() || `Connection ${id}`,
+    player: String(req.body.player || '').trim(),
+    player_uuid: String(req.body.player_uuid || '').trim(),
+    users: parseUsers(req.body.users),
+    play: actionOrDefault(req.body.play),
+    pause: actionOrDefault(req.body.pause),
+    resume: actionOrDefault(req.body.resume),
+    stop: actionOrDefault(req.body.stop),
+    lights: parseIdList(req.body.lights),
+    groups: parseIdList(req.body.groups),
+    dim_brightness: clampInteger(req.body.dim_brightness, 127, 1, 254),
+    dim_transition: clampInteger(req.body.dim_transition, 1, 0, 10),
+    hambisync: Boolean(req.body.hambisync),
+    night_mode: Boolean(req.body.night_mode),
+    active: Boolean(req.body.active),
+    min_duration: clampInteger(req.body.min_duration, 0, 0, 24 * 60 * 60 * 1000),
+    entertainment_sync: Boolean(req.body.entertainment_sync),
+    entertainment_group: String(req.body.entertainment_group || '').trim(),
+    entertainment_reactiveness: clampInteger(req.body.entertainment_reactiveness, 50, 1, 100),
+    entertainment_brightness: clampInteger(req.body.entertainment_brightness, 75, 1, 100),
+    entertainment_palette: PALETTES.has(req.body.entertainment_palette)
+      ? req.body.entertainment_palette
+      : 'auto'
+  };
+
+  const entertainmentChanged =
+    previous.entertainment_sync !== connection.entertainment_sync ||
+    String(previous.entertainment_group || '') !== connection.entertainment_group ||
+    previous.active !== connection.active;
+
+  if (entertainmentChanged || !connection.active || !connection.entertainment_sync) {
+    await audioSync.stopSync(id);
+  }
+
+  chain.assign(connection).write();
+  req.flash('success', 'Connection saved!');
+  return res.redirect(`/#form-connection${id}`);
 });
 
-router.post('/hambisync', function (req, res) {
-    let hambisync = {
-        host: "",
-        port: ""
+router.post('/location', (req, res) => {
+  let coordinates = { latitude: '', longitude: '' };
+  if (req.body.latitude !== '' && req.body.longitude !== '') {
+    const latitude = Number.parseFloat(req.body.latitude);
+    const longitude = Number.parseFloat(req.body.longitude);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      coordinates = { latitude, longitude };
     }
-    if (req.body.host && req.body.port) {
-        hambisync = {
-            host: req.body.host,
-            port: req.body.port
-        }
-    }
-    db.set('hambisync', hambisync).write();
-    req.flash('success', 'HAmbiSync saved !');
-    res.redirect('/#form-hambisync');
+  }
+
+  db.set('location', coordinates).write();
+  req.flash('success', 'Location saved!');
+  res.redirect('/#form-location');
 });
 
-router.post('/connect', function (req, res) {
-    hue.createUser(req.body.host)
-        .then(user => {
-            db.set('hue', {
-                username: user.username,
-                host: req.body.host
-            }).write();
-            hue.authenticate();
-            return hue.isAuthenticated();
-        })
-        .then(() => {
-            hue.authentication.status = 'success';
-            hue.authentication.isAuthenticated = true;
-            req.flash('success', 'Hue bridge connected !');
-        })
-        .catch(error => {
-            if (error instanceof huejay.Error && error.type === 101) {
-                logger.error(`Link button not pressed. Try again...`);
-                req.flash('error', 'Link button not pressed. Try again...');
-            } else {
-                logger.error(error.stack);
-                req.flash('error', 'There was an error connecting to Hue bridge (wrong or unreachable host?)');
-            }
-            db.set('hue', {
-                username: "",
-                host: ""
-            }).write();
-            hue.authentication.status = 'error';
-            hue.authentication.isAuthenticated = false;
-        })
-        .then(() => {
-            res.redirect('/#form-hue');
-        })
+router.post('/plex', async (req, res) => {
+  const plexConfig = {
+    host: String(req.body.host || '').trim(),
+    token: String(req.body.token || '').trim()
+  };
+
+  db.set('plex', plexConfig).write();
+  plex.authenticate();
+  const authenticated = await plex.isAuthenticated();
+  req.flash(authenticated ? 'success' : 'error', authenticated ? 'Plex saved and connected!' : 'Plex saved, but the server could not be reached.');
+  res.redirect('/#form-plex');
+});
+
+router.post('/hambisync', (req, res) => {
+  db.set('hambisync', {
+    host: String(req.body.host || '').trim(),
+    port: String(req.body.port || '').trim()
+  }).write();
+  req.flash('success', 'HAmbiSync saved!');
+  res.redirect('/#form-hambisync');
+});
+
+router.post('/connect', async (req, res) => {
+  const host = String(req.body.host || '').trim();
+  const previousConfig = db.get('hue').value();
+
+  try {
+    const result = await hue.createUserWithClientKey(host);
+    db.set('hue', {
+      username: result.username,
+      clientkey: result.clientkey,
+      host: hue.normalizeHost(host)
+    }).write();
+    hue.authenticate();
+    const authenticated = await hue.isAuthenticated();
+    if (!authenticated) throw new Error('Hue credentials were created but authentication failed');
+
+    req.flash('success', 'Hue bridge connected with Entertainment API support!');
+  } catch (error) {
+    db.set('hue', previousConfig).write();
+    hue.authenticate();
+    await hue.isAuthenticated();
+
+    if (error.type === 101) {
+      logger.error('Hue link button was not pressed');
+      req.flash('error', 'Link button not pressed. Press it and try again.');
+    } else {
+      logger.error('Hue bridge connection failed: %s', error.stack || error.message);
+      req.flash('error', 'Could not connect to the Hue bridge. Existing credentials were preserved.');
+    }
+  }
+
+  res.redirect('/#form-hue');
 });
 
 module.exports = router;

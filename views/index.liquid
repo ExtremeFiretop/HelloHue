@@ -1,493 +1,533 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>HelloHue</title>
-
-    <!-- Bootstrap 5 CSS -->
     <link href="/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Bootstrap-Select (1.14.x for Bootstrap 5) -->
-    <link href="/css/bootstrap-select.min.css" rel="stylesheet">
-
-    <!-- Load scripts in correct order: jQuery -> Popper -> Bootstrap -> bootstrap-select -->
-    <script src="/js/jquery.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="/js/bootstrap-select.min.js"></script>
-
-    <style>
-      .filter-option {
-        padding: .375rem .75rem;
-        font-size: 1rem;
-        line-height: 1.5;
-        color: #495057;
-        background-color: #fff;
-        background-clip: padding-box;
-        border: 1px solid #ced4da;
-        border-radius: .25rem;
-        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
-      }
-      .badge-custom {
-        height: 14px;
-        width: 14px;
-      }
-    </style>
+    <link href="/public/css/app.css" rel="stylesheet">
   </head>
+  <body>
 
-  <body class="bg-light">
+    <!-- Mobile top navbar (visible < lg) -->
+    <nav class="navbar d-lg-none sticky-top mobile-nav" data-bs-theme="dark">
+      <div class="container-fluid">
+        <button class="navbar-toggler border-0" type="button"
+                data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <span class="navbar-brand mb-0 text-white fw-bold">HelloHue</span>
+        <div style="width: 40px"></div>
+      </div>
+    </nav>
 
-    <div class="container">
-      <div class="py-5 text-center">
-        <h1>HelloHue</h1>
-        <p class="lead">Configure HelloHue to work with your setup.</p>
+    <div class="d-flex">
 
+      <!-- ─── Sidebar ─── -->
+      <div class="offcanvas-lg offcanvas-start sidebar" tabindex="-1" id="sidebar">
+        <div class="offcanvas-header d-lg-none" style="border-bottom: 1px solid rgba(255,255,255,0.06)">
+          <h5 class="offcanvas-title text-white">HelloHue</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
+                  data-bs-target="#sidebar" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-0">
+
+          <!-- Brand (desktop only) -->
+          <div class="brand d-none d-lg-flex align-items-center px-3 py-3">
+            <span class="brand-icon me-2">💡</span>
+            <span class="brand-text">HelloHue</span>
+          </div>
+
+          <!-- Navigation -->
+          <nav class="nav flex-column px-2 flex-grow-1 mt-2" id="sidebar-nav" role="tablist">
+            <div class="nav-section-label px-2">Configuration</div>
+            <a class="nav-link active" data-bs-toggle="pill" href="#form-hue" role="tab">
+              <span>Hue Bridge</span>
+              <span class="status-dot {% if auth.hue.isAuthenticated %}success{% else %}danger{% endif %}"
+                    data-bs-toggle="tooltip" data-bs-placement="right"
+                    title="{% if auth.hue.isAuthenticated %}Connected{% else %}Not connected{% endif %}"></span>
+            </a>
+            <a class="nav-link" data-bs-toggle="pill" href="#form-plex" role="tab">
+              <span>Plex Server</span>
+              <span class="status-dot {% if auth.plex.isAuthenticated %}success{% else %}danger{% endif %}"
+                    data-bs-toggle="tooltip" data-bs-placement="right"
+                    title="{% if auth.plex.isAuthenticated %}Connected{% else %}Not connected{% endif %}"></span>
+            </a>
+            <a class="nav-link" data-bs-toggle="pill" href="#form-location" role="tab">
+              <span>Location</span>
+              <span class="status-dot {% if config.location.latitude != '' and config.location.longitude != '' %}success{% else %}warning{% endif %}"
+                    data-bs-toggle="tooltip" data-bs-placement="right"
+                    title="{% if config.location.latitude != '' and config.location.longitude != '' %}Configured{% else %}Not set{% endif %}"></span>
+            </a>
+            <a class="nav-link" data-bs-toggle="pill" href="#form-hambisync" role="tab">
+              <span>HAmbiSync</span>
+              <span class="status-dot {% if config.hambisync.host != '' and config.hambisync.port != '' %}success{% else %}warning{% endif %}"
+                    data-bs-toggle="tooltip" data-bs-placement="right"
+                    title="{% if config.hambisync.host != '' and config.hambisync.port != '' %}Configured{% else %}Not set{% endif %}"></span>
+            </a>
+
+            <div class="nav-section-label px-2 mt-3">Connections</div>
+            {% for connection in config.connections %}
+            <a class="nav-link" data-bs-toggle="pill" href="#form-connection{{ connection.id }}" role="tab">
+              <span>{{ connection.name }}</span>
+              <span class="status-dot {% if connection.active %}success{% else %}warning{% endif %}"
+                    data-bs-toggle="tooltip" data-bs-placement="right"
+                    title="{% if connection.active %}Active{% else %}Inactive{% endif %}"></span>
+            </a>
+            {% endfor %}
+          </nav>
+
+          <!-- Sidebar actions -->
+          <div class="sidebar-actions px-3 pb-3">
+            <form action="/config/connection/add" method="POST" class="mb-2">
+              <button type="submit" class="btn btn-outline-light btn-sm w-100">+ Add Connection</button>
+            </form>
+            <a role="button"
+               class="btn btn-sm w-100 {% if hellohue.status %}btn-danger{% else %}btn-success{% endif %}"
+               href="{% if hellohue.status %}/stop{% else %}/start{% endif %}">
+              {% if hellohue.status %}Stop HelloHue{% else %}Start HelloHue{% endif %}
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── Main content ─── -->
+      <main class="main-content">
+
+        <!-- Flash messages -->
         {% if messages.error %}
-          <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ messages.error | join: ', ' }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
+        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+          {{ messages.error | join: ', ' }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
         {% endif %}
-
         {% if messages.success %}
-          <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ messages.success | join: ', ' }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
+        <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+          {{ messages.success | join: ', ' }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
         {% endif %}
-      </div>
 
-      <div class="row">
-        <div class="col-4">
-          <div class="list-group" id="list-tab" role="tablist">
+        <div class="tab-content" id="main-content">
 
-            <!-- Hue -->
-            <a class="list-group-item list-group-item-action active d-flex justify-content-between align-items-center"
-               id="list-hue-list"
-               data-bs-toggle="list"
-               href="#form-hue"
-               role="tab"
-               aria-controls="form-hue">
-              Hue bridge
-              <span class="badge badge-{% if auth.hue.isAuthenticated %}success{% else %}danger{% endif %} badge-pill badge-custom"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="right"
-                    title="{% if auth.hue.isAuthenticated %}Hue bridge connected{% else %}Hue bridge not reachable{% endif %}">
-              </span>
-            </a>
-
-            <!-- Plex -->
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-               id="list-plex-list"
-               data-bs-toggle="list"
-               href="#form-plex"
-               role="tab"
-               aria-controls="form-plex">
-              Plex Server
-              <span class="badge badge-{% if auth.plex.isAuthenticated %}success{% else %}danger{% endif %} badge-pill badge-custom"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="right"
-                    title="{% if auth.plex.isAuthenticated %}Plex connected{% else %}Plex not reachable{% endif %}">
-              </span>
-            </a>
-
-            <!-- Location -->
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-               id="list-location-list"
-               data-bs-toggle="list"
-               href="#form-location"
-               role="tab"
-               aria-controls="form-location">
-              Location
-              <span class="badge badge-{% if config.location.latitude != '' and config.location.longitude != '' %}success{% else %}warning{% endif %} badge-pill badge-custom"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="right"
-                    title="{% if config.location.latitude != '' and config.location.longitude != '' %}Location set{% else %}Location not set{% endif %}">
-              </span>
-            </a>
-
-            <!-- HAmbiSync -->
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-               id="list-hambisync-list"
-               data-bs-toggle="list"
-               href="#form-hambisync"
-               role="tab"
-               aria-controls="form-hambisync">
-              HAmbiSync
-              <span class="badge badge-{% if config.hambisync.host != '' and config.hambisync.port != '' %}success{% else %}warning{% endif %} badge-pill badge-custom"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="right"
-                    title="{% if config.hambisync.host != '' and config.hambisync.port != '' %}HAmbiSync configured{% else %}HAmbiSync not configured{% endif %}">
-              </span>
-            </a>
-
-            <!-- Rooms -->
-            {% for room in config.rooms %}
-              <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                 id="list-room{{ room.id }}-list"
-                 data-bs-toggle="list"
-                 href="#form-room{{ room.id }}"
-                 role="tab"
-                 aria-controls="form-room{{ room.id }}">
-                {{ room.name }}
-                <span class="badge badge-{% if room.active %}success{% else %}warning{% endif %} badge-pill badge-custom"
-                      data-bs-toggle="tooltip"
-                      data-bs-placement="right"
-                      title="{% if room.active %}Room is active{% else %}Room is inactive{% endif %}">
-                </span>
-              </a>
-            {% endfor %}
-          </div>
-
-          <a role="button"
-             class="btn btn-outline-{% if hellohue.status %}danger{% else %}success{% endif %} btn-block"
-             href="{% if hellohue.status %}/stop{% else %}/start{% endif %}"
-             style="margin-top:20px">
-            {% if hellohue.status %}
-              Stop HelloHue
-            {% else %}
-              Start HelloHue
-            {% endif %}
-          </a>
-        </div>
-
-        <div class="col-8">
-          <div class="tab-content" id="nav-tabContent">
-
-            <!-- Hue tab pane -->
-            <div class="tab-pane fade show active card card-body"
-                 id="form-hue"
-                 role="tabpanel"
-                 aria-labelledby="list-hue-list">
+          <!-- ────────────────── HUE BRIDGE ────────────────── -->
+          <div class="tab-pane fade show active" id="form-hue" role="tabpanel">
+            <div class="content-card">
               <form action="/config/connect" method="POST">
-                <h4 class="mb-3">Hue bridge</h4>
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="host">Host</label>
-                    <input type="text" class="form-control" id="host" name="host"
-                           placeholder="192.168.1.18"
-                           value="{{ config.hue.host }}"
-                           required
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                  <h4 class="mb-0">Hue Bridge</h4>
+                  <span class="badge {% if auth.hue.isAuthenticated %}bg-success{% else %}bg-danger{% endif %}">
+                    {% if auth.hue.isAuthenticated %}Connected{% else %}Not Connected{% endif %}
+                  </span>
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label for="hue-host" class="form-label">Host</label>
+                    <input type="text" class="form-control" id="hue-host" name="host"
+                           placeholder="192.168.1.18" value="{{ config.hue.host }}" required
                            pattern="((^|\.)((25[0-5])|(2[0-4]\d)|(1\d\d)|([1-9]?\d))){4}$">
-                    <small class="form-text text-muted">
-                      Hue bridge IP address
-                    </small>
+                    <div class="form-text">Hue bridge IP address</div>
                   </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="username">Username</label>
-                    <input type="text" class="form-control" id="username"
-                           placeholder="No username yet!"
-                           value="{{ config.hue.username }}"
-                           required disabled>
-                    <small class="form-text text-muted">
-                      Hue bridge username. Will have a value once connected
-                    </small>
+                  <div class="col-md-6">
+                    <label for="hue-username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="hue-username"
+                           placeholder="No username yet!" value="{{ config.hue.username }}" disabled>
+                    <div class="form-text">Auto-generated on connection. Entertainment key: {% if config.hue.clientkey != '' %}available{% else %}reconnect required{% endif %}</div>
                   </div>
                 </div>
-                <hr class="mb-4">
-                <div class="alert alert-info" role="alert">
-                  <small>You need to press the button on your Hue BRIDGE <b>before</b> clicking "Connect to Hue bridge"</small>
+                <div class="alert alert-info mt-4 mb-4 d-flex align-items-center" role="alert">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="me-2 flex-shrink-0" viewBox="0 0 16 16">
+                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.399l-.451.003.082-.381 1.96-.411.164-.004z"/>
+                    <path d="M8 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
+                  </svg>
+                  <span>Press the button on your Hue Bridge <strong>before</strong> clicking connect.</span>
                 </div>
-                <button class="btn btn-primary btn-lg btn-block" type="submit">Connect to Hue bridge</button>
+                <button class="btn btn-primary w-100" type="submit">Connect to Hue Bridge</button>
               </form>
             </div>
-
-            <!-- Plex tab pane -->
-            <div class="tab-pane fade card card-body"
-                 id="form-plex"
-                 role="tabpanel"
-                 aria-labelledby="list-plex-list">
-              <form action="/config/plex" method="POST">
-                <h4 class="mb-3">Plex Server</h4>
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="host">Host</label>
-                    <input type="text" class="form-control" id="host" name="host"
-                           placeholder="127.0.0.1"
-                           value="{{ config.plex.host }}"
-                           pattern="((^|\.)((25[0-5])|(2[0-4]\d)|(1\d\d)|([1-9]?\d))){4}$">
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="token">Token</label>
-                    <input type="text" class="form-control" id="token" name="token"
-                           placeholder="kn7bfeh8fnezN"
-                           value="{{ config.plex.token }}">
-                    <small class="form-text text-muted">
-                      <a target="_blank" href="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/">Read this</a> to find your Plex Token
-                    </small>
-                  </div>
-                </div>
-                <hr class="mb-4">
-                <button class="btn btn-primary btn-lg btn-block" type="submit">Save Plex</button>
-              </form>
-            </div>
-
-            <!-- Location tab pane -->
-            <div class="tab-pane fade card card-body"
-                 id="form-location"
-                 role="tabpanel"
-                 aria-labelledby="list-location-list">
-              <form action="/config/location" method="POST">
-                <h4 class="mb-3">Location</h4>
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="latitude">Latitude</label>
-                    <input type="text" class="form-control" id="latitude" name="latitude"
-                           placeholder="51.1"
-                           value="{{ config.location.latitude }}"
-                           pattern="-?\d{1,3}\.\d+">
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="longitude">Longitude</label>
-                    <input type="text" class="form-control" id="longitude" name="longitude"
-                           placeholder="-4.23"
-                           value="{{ config.location.longitude }}"
-                           pattern="-?\d{1,3}\.\d+">
-                  </div>
-                </div>
-                <hr class="mb-4">
-                <button class="btn btn-primary btn-lg btn-block" type="submit">Save location</button>
-              </form>
-            </div>
-
-            <!-- HAmbiSync tab pane -->
-            <div class="tab-pane fade card card-body"
-                 id="form-hambisync"
-                 role="tabpanel"
-                 aria-labelledby="list-hambisync-list">
-              <form action="/config/hambisync" method="POST">
-                <h4 class="mb-3">HAmbiSync</h4>
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="host">Host</label>
-                    <input type="text" class="form-control" id="host" name="host"
-                           placeholder="127.0.0.1"
-                           value="{{ config.hambisync.host }}"
-                           pattern="((^|\.)((25[0-5])|(2[0-4]\d)|(1\d\d)|([1-9]?\d))){4}$">
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label for="port">Port</label>
-                    <input type="text" class="form-control" id="port" name="port"
-                           placeholder="4567"
-                           value="{{ config.hambisync.port }}">
-                  </div>
-                </div>
-                <hr class="mb-4">
-                <button class="btn btn-primary btn-lg btn-block" type="submit">Save HAmbiSync</button>
-              </form>
-            </div>
-
-            <!-- Room tabs -->
-            {% for room in config.rooms %}
-              <div class="tab-pane fade card card-body"
-                   id="form-room{{ room.id }}"
-                   role="tabpanel"
-                   aria-labelledby="list-room{{ room.id }}-list">
-                <form action="/config/room/{{ room.id }}" method="POST">
-                  <h4 class="mb-3">{{ room.name }}</h4>
-                  <div class="row">
-                    <div class="col-md-12 mb-3">
-                      <label for="name">Friendly room name</label>
-                      <input type="text" class="form-control" id="name" name="name"
-                             placeholder="Living room"
-                             value="{{ room.name }}"
-                             required>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                      <label for="player">Plex Player name</label>
-                      <input type="text" class="form-control" id="player" name="player"
-                             placeholder="Chrome"
-                             value="{{ room.player }}"
-                             required>
-                      <small class="form-text text-muted">
-                        Restrict actions to a specific plex player
-                      </small>
-                    </div>
-                    <div class="col-md-8 mb-3">
-                      <label for="users">Plex Users names</label>
-                      <input type="text" class="form-control" id="users" name="users"
-                             placeholder="MyAwesomePlexName"
-                             value="{{ room.users | join: ', ' }}">
-                      <small class="form-text text-muted">
-                        Restrict actions to specific plex user(s). Comma separated list of usernames, case sensitive
-                      </small>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                      <label for="lights">Lights</label>
-                      <select name="lights" id="lights{{ room.id }}" class="selectpicker" data-width="100%" data-style="btn" multiple>
-                        {% for light in lights %}
-                          <option value="{{ light.id }}">{{ light.name }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                      <label for="groups">Light groups</label>
-                      <select name="groups" id="groups{{ room.id }}" class="selectpicker" data-width="100%" data-style="btn" multiple>
-                        {% for group in groups %}
-                          <option value="{{ group.id }}">{{ group.name }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                      <label for="play">Play action</label>
-                      <select class="form-select" id="play" name="play">
-                        <option value="nothing" {% if room.play == "nothing" %} selected {% endif %}>Nothing</option>
-                        <option value="turn_on" {% if room.play == "turn_on" %} selected {% endif %}>Turn on</option>
-                        <option value="turn_off" {% if room.play == "turn_off" %} selected {% endif %}>Turn off</option>
-                        <option value="dim" {% if room.play == "dim" %} selected {% endif %}>Dim</option>
-                      </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                      <label for="pause">Pause action</label>
-                      <select class="form-select" id="pause" name="pause">
-                        <option value="nothing" {% if room.pause == "nothing" %} selected {% endif %}>Nothing</option>
-                        <option value="turn_on" {% if room.pause == "turn_on" %} selected {% endif %}>Turn on</option>
-                        <option value="turn_off" {% if room.pause == "turn_off" %} selected {% endif %}>Turn off</option>
-                        <option value="dim" {% if room.pause == "dim" %} selected {% endif %}>Dim</option>
-                      </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                      <label for="resume">Resume action</label>
-                      <select class="form-select" id="resume" name="resume">
-                        <option value="nothing" {% if room.resume == "nothing" %} selected {% endif %}>Nothing</option>
-                        <option value="turn_on" {% if room.resume == "turn_on" %} selected {% endif %}>Turn on</option>
-                        <option value="turn_off" {% if room.resume == "turn_off" %} selected {% endif %}>Turn off</option>
-                        <option value="dim" {% if room.resume == "dim" %} selected {% endif %}>Dim</option>
-                      </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                      <label for="stop">Stop action</label>
-                      <select class="form-select" id="stop" name="stop">
-                        <option value="nothing" {% if room.stop == "nothing" %} selected {% endif %}>Nothing</option>
-                        <option value="turn_on" {% if room.stop == "turn_on" %} selected {% endif %}>Turn on</option>
-                        <option value="turn_off" {% if room.stop == "turn_off" %} selected {% endif %}>Turn off</option>
-                        <option value="dim" {% if room.stop == "dim" %} selected {% endif %}>Dim</option>
-                      </select>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                      <label for="stop">Minimum media duration</label>
-                      <select class="form-select" id="min_duration" name="min_duration">
-                        <option value="0" {% if room.min_duration == 0 %} selected {% endif %}>Disabled</option>
-                        <option value="1800000" {% if room.min_duration == 1800000 %} selected {% endif %}>30 minutes</option>
-                        <option value="3600000" {% if room.min_duration == 3600000 %} selected {% endif %}>1 hour</option>
-                        <option value="4800000" {% if room.min_duration == 4800000 %} selected {% endif %}>1 hour 20 minutes</option>
-                        <option value="6000000" {% if room.min_duration == 6000000 %} selected {% endif %}>1 hour 40 minutes</option>
-                        <option value="7200000" {% if room.min_duration == 7200000 %} selected {% endif %}>2 hours</option>
-                      </select>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                      <div class="form-group">
-                        <label for="dim_brightness">Brightness when dimming lights</label>
-                        <input class="form-range"
-                               type="range"
-                               id="dim_brightness"
-                               name="dim_brightness"
-                               value="{{ room.dim_brightness }}"
-                               min="1" max="254" step="1"
-                               oninput="this.nextElementSibling.value = this.value">
-                        <output>{{ room.dim_brightness }}</output>
-                      </div>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                      <div class="form-group">
-                        <label for="dim_transition">Transition time (in seconds)</label>
-                        <input class="form-range"
-                               type="range"
-                               id="dim_transition"
-                               name="dim_transition"
-                               value="{{ room.dim_transition }}"
-                               min="0" max="10" step="1"
-                               oninput="this.nextElementSibling.value = this.value">
-                        <output>{{ room.dim_transition }}</output>
-                      </div>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                      <div class="form-check form-check-inline">
-                        <input class="form-check-input"
-                               type="checkbox"
-                               id="hambisync"
-                               name="hambisync"
-                               value="true"
-                               {% if room.hambisync %} checked {% endif %}>
-                        <label class="form-check-label" for="hambisync">Start and stop HAmbiSync with media</label>
-                      </div>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                      <div class="form-check form-check-inline">
-                        <input class="form-check-input"
-                               type="checkbox"
-                               id="night_mode"
-                               name="night_mode"
-                               value="true"
-                               {% if room.night_mode %} checked {% endif %}>
-                        <label class="form-check-label" for="night_mode">Trigger only at night</label>
-                      </div>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                      <div class="form-check form-check-inline">
-                        <input class="form-check-input"
-                               type="checkbox"
-                               id="active"
-                               name="active"
-                               value="true"
-                               {% if room.active %} checked {% endif %}>
-                        <label class="form-check-label" for="active">Activate this room</label>
-                      </div>
-                    </div>
-                  </div>
-                  <hr class="mb-4">
-                  <button class="btn btn-primary btn-lg btn-block" type="submit">Save room</button>
-                </form>
-              </div>
-            {% endfor %}
           </div>
-        </div>
-      </div>
 
-      <footer class="my-5 pt-5 text-muted text-center text-small">
-        <p class="mb-1">Designed and built with all the love in the world</p>
-        <ul class="list-inline">
-          <li class="list-inline-item">
-            <a href="https://www.paypal.com/paypalme/ExtremeFiretop" target="_blank">
-              Donate
-            </a>
-          </li>
-        </ul>
-      </footer>
+          <!-- ────────────────── PLEX SERVER ────────────────── -->
+          <div class="tab-pane fade" id="form-plex" role="tabpanel">
+            <div class="content-card">
+              <form action="/config/plex" method="POST">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                  <h4 class="mb-0">Plex Server</h4>
+                  <span class="badge {% if auth.plex.isAuthenticated %}bg-success{% else %}bg-danger{% endif %}">
+                    {% if auth.plex.isAuthenticated %}Connected{% else %}Not Connected{% endif %}
+                  </span>
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label for="plex-host" class="form-label">Host</label>
+                    <input type="text" class="form-control" id="plex-host" name="host"
+                           placeholder="127.0.0.1 or http://plex.local:32400" value="{{ config.plex.host }}">
+                    <div class="form-text">Hostname, IP address, or a full HTTP/HTTPS URL. Port 32400 is used when omitted.</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="plex-token" class="form-label">Token</label>
+                    <input type="text" class="form-control" id="plex-token" name="token"
+                           placeholder="kn7bfeh8fnezN" value="{{ config.plex.token }}">
+                    <div class="form-text">
+                      <a href="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/"
+                         target="_blank" rel="noopener">How to find your Plex Token</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <button class="btn btn-primary w-100" type="submit">Save Plex</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ────────────────── LOCATION ────────────────── -->
+          <div class="tab-pane fade" id="form-location" role="tabpanel">
+            <div class="content-card">
+              <form action="/config/location" method="POST">
+                <h4 class="mb-2">Location</h4>
+                <p class="form-text mb-3">Used for sunrise/sunset calculations in night-mode connections.</p>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label for="loc-latitude" class="form-label">Latitude</label>
+                    <input type="text" class="form-control" id="loc-latitude" name="latitude"
+                           placeholder="51.1" value="{{ config.location.latitude }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label for="loc-longitude" class="form-label">Longitude</label>
+                    <input type="text" class="form-control" id="loc-longitude" name="longitude"
+                           placeholder="-4.23" value="{{ config.location.longitude }}">
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <button class="btn btn-primary w-100" type="submit">Save Location</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ────────────────── HAMBISYNC ────────────────── -->
+          <div class="tab-pane fade" id="form-hambisync" role="tabpanel">
+            <div class="content-card">
+              <form action="/config/hambisync" method="POST">
+                <h4 class="mb-2">HAmbiSync</h4>
+                <p class="form-text mb-3">Optional compatibility integration retained from the ExtremeFiretop build.</p>
+                <div class="row g-3">
+                  <div class="col-md-8">
+                    <label for="hambisync-host" class="form-label">Host</label>
+                    <input type="text" class="form-control" id="hambisync-host" name="host"
+                           placeholder="192.168.1.50" value="{{ config.hambisync.host }}">
+                  </div>
+                  <div class="col-md-4">
+                    <label for="hambisync-port" class="form-label">Port</label>
+                    <input type="number" class="form-control" id="hambisync-port" name="port"
+                           min="1" max="65535" placeholder="8080" value="{{ config.hambisync.port }}">
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <button class="btn btn-primary w-100" type="submit">Save HAmbiSync</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ────────────────── CONNECTIONS ────────────────── -->
+          {% for connection in config.connections %}
+          <div class="tab-pane fade" id="form-connection{{ connection.id }}" role="tabpanel">
+            <div class="content-card">
+              <form action="/config/connection/{{ connection.id }}" method="POST">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <h4 class="mb-0">{{ connection.name }}</h4>
+                  <span class="badge {% if connection.active %}bg-success{% else %}bg-secondary{% endif %}">
+                    {% if connection.active %}Active{% else %}Inactive{% endif %}
+                  </span>
+                </div>
+                <div class="mb-4">
+                  <span class="api-endpoint">ID: {{ connection.id }}</span>
+                  <span class="api-endpoint ms-1">/api/connection/{{ connection.id }}/status</span>
+                  <span class="api-endpoint ms-1">/api/connection/{{ connection.id }}/enable</span>
+                  <span class="api-endpoint ms-1">/api/connection/{{ connection.id }}/disable</span>
+                </div>
+
+                <!-- Basic Settings -->
+                <div class="row g-3 mb-4">
+                  <div class="col-12">
+                    <label for="name-{{ connection.id }}" class="form-label">Friendly Name</label>
+                    <input type="text" class="form-control" id="name-{{ connection.id }}" name="name"
+                           placeholder="Living room" value="{{ connection.name }}" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="player-{{ connection.id }}" class="form-label">Plex Player Name</label>
+                    <input type="text" class="form-control" id="player-{{ connection.id }}" name="player"
+                           placeholder="Chrome" value="{{ connection.player }}" required>
+                    <div class="form-text">Restrict actions to a specific player</div>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="player_uuid-{{ connection.id }}" class="form-label">Player UUID</label>
+                    <input type="text" class="form-control" id="player_uuid-{{ connection.id }}" name="player_uuid"
+                           value="{{ connection.player_uuid }}">
+                    <div class="form-text">Optional. Check logs for UUID</div>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="users-{{ connection.id }}" class="form-label">Plex Users</label>
+                    <input type="text" class="form-control" id="users-{{ connection.id }}" name="users"
+                           placeholder="User1, User2" value="{{ connection.users | join: ', ' }}">
+                    <div class="form-text">Comma-separated, case sensitive</div>
+                  </div>
+                </div>
+
+                <!-- Lights & Groups -->
+                <div class="section-divider"></div>
+                <h6 class="section-header mb-3">Lights &amp; Groups</h6>
+                <div class="row g-3 mb-4">
+                  <div class="col-md-6">
+                    <label class="form-label">Lights</label>
+                    <div class="multi-select dropdown" data-field="lights" data-selected="{{ connection.lights | join: ',' }}">
+                      <button class="form-select text-start" type="button"
+                              data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                        <span class="ms-label text-muted">Select lights...</span>
+                      </button>
+                      <ul class="dropdown-menu w-100 p-2 shadow-sm">
+                        {% for light in lights %}
+                        <li>
+                          <label class="dropdown-item d-flex align-items-center gap-2 py-1 rounded">
+                            <input class="form-check-input m-0 ms-opt" type="checkbox" value="{{ light.id }}">
+                            <span>{{ light.name }}</span>
+                          </label>
+                        </li>
+                        {% endfor %}
+                      </ul>
+                      <div class="ms-hidden-inputs"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Light Groups</label>
+                    <div class="multi-select dropdown" data-field="groups" data-selected="{{ connection.groups | join: ',' }}">
+                      <button class="form-select text-start" type="button"
+                              data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                        <span class="ms-label text-muted">Select groups...</span>
+                      </button>
+                      <ul class="dropdown-menu w-100 p-2 shadow-sm">
+                        {% for group in groups %}
+                        <li>
+                          <label class="dropdown-item d-flex align-items-center gap-2 py-1 rounded">
+                            <input class="form-check-input m-0 ms-opt" type="checkbox" value="{{ group.id }}">
+                            <span>{{ group.name }}</span>
+                          </label>
+                        </li>
+                        {% endfor %}
+                      </ul>
+                      <div class="ms-hidden-inputs"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Playback Actions -->
+                <div class="section-divider"></div>
+                <h6 class="section-header mb-3">Playback Actions</h6>
+                <div class="row g-3 mb-4">
+                  <div class="col-6 col-md-3">
+                    <label for="play-{{ connection.id }}" class="form-label">Play</label>
+                    <select class="form-select" id="play-{{ connection.id }}" name="play">
+                      <option value="nothing" {% if connection.play == "nothing" %}selected{% endif %}>Nothing</option>
+                      <option value="turn_on" {% if connection.play == "turn_on" %}selected{% endif %}>Turn On</option>
+                      <option value="turn_off" {% if connection.play == "turn_off" %}selected{% endif %}>Turn Off</option>
+                      <option value="dim" {% if connection.play == "dim" %}selected{% endif %}>Dim</option>
+                    </select>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <label for="pause-{{ connection.id }}" class="form-label">Pause</label>
+                    <select class="form-select" id="pause-{{ connection.id }}" name="pause">
+                      <option value="nothing" {% if connection.pause == "nothing" %}selected{% endif %}>Nothing</option>
+                      <option value="turn_on" {% if connection.pause == "turn_on" %}selected{% endif %}>Turn On</option>
+                      <option value="turn_off" {% if connection.pause == "turn_off" %}selected{% endif %}>Turn Off</option>
+                      <option value="dim" {% if connection.pause == "dim" %}selected{% endif %}>Dim</option>
+                    </select>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <label for="resume-{{ connection.id }}" class="form-label">Resume</label>
+                    <select class="form-select" id="resume-{{ connection.id }}" name="resume">
+                      <option value="nothing" {% if connection.resume == "nothing" %}selected{% endif %}>Nothing</option>
+                      <option value="turn_on" {% if connection.resume == "turn_on" %}selected{% endif %}>Turn On</option>
+                      <option value="turn_off" {% if connection.resume == "turn_off" %}selected{% endif %}>Turn Off</option>
+                      <option value="dim" {% if connection.resume == "dim" %}selected{% endif %}>Dim</option>
+                    </select>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <label for="stop-{{ connection.id }}" class="form-label">Stop</label>
+                    <select class="form-select" id="stop-{{ connection.id }}" name="stop">
+                      <option value="nothing" {% if connection.stop == "nothing" %}selected{% endif %}>Nothing</option>
+                      <option value="turn_on" {% if connection.stop == "turn_on" %}selected{% endif %}>Turn On</option>
+                      <option value="turn_off" {% if connection.stop == "turn_off" %}selected{% endif %}>Turn Off</option>
+                      <option value="dim" {% if connection.stop == "dim" %}selected{% endif %}>Dim</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Duration, Brightness & Transitions -->
+                <div class="row g-3 mb-4">
+                  <div class="col-md-4">
+                    <label for="min_duration-{{ connection.id }}" class="form-label">Minimum Media Duration</label>
+                    <select class="form-select" id="min_duration-{{ connection.id }}" name="min_duration">
+                      <option value="0" {% if connection.min_duration == 0 %}selected{% endif %}>Disabled</option>
+                      <option value="1800000" {% if connection.min_duration == 1800000 %}selected{% endif %}>30 minutes</option>
+                      <option value="3600000" {% if connection.min_duration == 3600000 %}selected{% endif %}>1 hour</option>
+                      <option value="4800000" {% if connection.min_duration == 4800000 %}selected{% endif %}>1 hour 20 min</option>
+                      <option value="6000000" {% if connection.min_duration == 6000000 %}selected{% endif %}>1 hour 40 min</option>
+                      <option value="7200000" {% if connection.min_duration == 7200000 %}selected{% endif %}>2 hours</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="range-with-value">
+                      <label class="form-label d-flex justify-content-between">
+                        <span>Dim Brightness</span>
+                        <span class="range-value">{{ connection.dim_brightness }}</span>
+                      </label>
+                      <input class="form-range" type="range" name="dim_brightness"
+                             value="{{ connection.dim_brightness }}" min="1" max="254" step="1">
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="range-with-value">
+                      <label class="form-label d-flex justify-content-between">
+                        <span>Transition Time</span>
+                        <span class="range-value" data-suffix="s">{{ connection.dim_transition }}s</span>
+                      </label>
+                      <input class="form-range" type="range" name="dim_transition"
+                             value="{{ connection.dim_transition }}" min="0" max="10" step="1">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Entertainment Sync -->
+                <div class="section-divider"></div>
+                <h6 class="section-header mb-2">Music-Reactive Lighting</h6>
+                <p class="form-text mb-3">Real-time light sync with music. Requires a Hue Entertainment Area (create one in the Hue app).</p>
+                <div class="row g-3 mb-4">
+                  <div class="col-md-6">
+                    <label for="entertainment_group-{{ connection.id }}" class="form-label">Entertainment Area</label>
+                    <select name="entertainment_group" class="form-select" id="entertainment_group-{{ connection.id }}">
+                      <option value="">None</option>
+                      {% for eg in entertainmentGroups %}
+                        <option value="{{ eg.id }}">{{ eg.name }}</option>
+                      {% endfor %}
+                    </select>
+                    <div class="form-text">Create Entertainment Areas in the Hue app</div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check form-switch mt-md-4 pt-md-2">
+                      <input class="form-check-input" type="checkbox" role="switch"
+                             id="entertainment_sync-{{ connection.id }}" name="entertainment_sync" value="true"
+                             {% if connection.entertainment_sync %}checked{% endif %}>
+                      <label class="form-check-label" for="entertainment_sync-{{ connection.id }}">
+                        Enable music-reactive lighting
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <label for="entertainment_palette-{{ connection.id }}" class="form-label">Color Palette</label>
+                    <select name="entertainment_palette" class="form-select" id="entertainment_palette-{{ connection.id }}">
+                      <optgroup label="Automatic">
+                        <option value="auto">Auto (frequency-based)</option>
+                      </optgroup>
+                      <optgroup label="Single Colors">
+                        <option value="red">Red</option>
+                        <option value="orange">Orange</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="green">Green</option>
+                        <option value="cyan">Cyan</option>
+                        <option value="blue">Blue</option>
+                        <option value="purple">Purple</option>
+                        <option value="pink">Pink</option>
+                      </optgroup>
+                      <optgroup label="Palettes">
+                        <option value="warm">Warm (reds, oranges, yellows)</option>
+                        <option value="cool">Cool (blues, purples, cyans)</option>
+                        <option value="sunset">Sunset (reds, oranges, pinks)</option>
+                        <option value="ocean">Ocean (blues, teals, greens)</option>
+                        <option value="forest">Forest (greens, teals, earth)</option>
+                        <option value="party">Party (full rainbow)</option>
+                      </optgroup>
+                    </select>
+                    <div class="form-text">Auto maps bass to red, mids to green, treble to blue</div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="range-with-value">
+                      <label class="form-label d-flex justify-content-between">
+                        <span>Reactiveness</span>
+                        <span class="range-value">{{ connection.entertainment_reactiveness | default: 50 }}</span>
+                      </label>
+                      <input class="form-range" type="range" name="entertainment_reactiveness"
+                             value="{{ connection.entertainment_reactiveness | default: 50 }}" min="1" max="100" step="1">
+                      <div class="form-text">Low = smooth transitions, High = snappy response to beats</div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="range-with-value">
+                      <label class="form-label d-flex justify-content-between">
+                        <span>Brightness Ceiling</span>
+                        <span class="range-value" data-suffix="%">{{ connection.entertainment_brightness | default: 75 }}%</span>
+                      </label>
+                      <input class="form-range" type="range" name="entertainment_brightness"
+                             value="{{ connection.entertainment_brightness | default: 75 }}" min="1" max="100" step="1">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Toggle Options -->
+                <div class="section-divider"></div>
+                <h6 class="section-header mb-3">Options</h6>
+                <div class="d-flex flex-column gap-3 mb-4">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="hambisync-{{ connection.id }}" name="hambisync" value="true"
+                           {% if connection.hambisync %}checked{% endif %}>
+                    <label class="form-check-label" for="hambisync-{{ connection.id }}">
+                      Start and stop HAmbiSync with media
+                    </label>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="night_mode-{{ connection.id }}" name="night_mode" value="true"
+                           {% if connection.night_mode %}checked{% endif %}>
+                    <label class="form-check-label" for="night_mode-{{ connection.id }}">
+                      Trigger only at night
+                    </label>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="active-{{ connection.id }}" name="active" value="true"
+                           {% if connection.active %}checked{% endif %}>
+                    <label class="form-check-label" for="active-{{ connection.id }}">
+                      Activate this connection
+                    </label>
+                  </div>
+                </div>
+
+                <button class="btn btn-primary w-100 mb-2" type="submit">Save Connection</button>
+              </form>
+              <form action="/config/connection/{{ connection.id }}/delete" method="POST"
+                    onsubmit="return confirm('Delete this connection?')">
+                <button class="btn btn-outline-danger w-100" type="submit">Delete Connection</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+
+        </div>
+      </main>
+
     </div>
 
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/app.js"></script>
     <script>
-      document.addEventListener('DOMContentLoaded', function () {
-        // Initialize all .selectpicker elements
-        $('.selectpicker').selectpicker();
-
-        // Now set each room’s <select> value
-        {% for room in config.rooms %}
-          var lightsArray{{ room.id }} = JSON.parse('{{ room.lights | json }}').map(function(x){ return String(x); });
-          var groupsArray{{ room.id }} = JSON.parse('{{ room.groups | json }}').map(function(x){ return String(x); });
-
-          $('#lights{{ room.id }}').selectpicker('val', lightsArray{{ room.id }});
-          $('#groups{{ room.id }}').selectpicker('val', groupsArray{{ room.id }});
-        {% endfor %}
-
-        // Initialize tooltips, etc.
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-          return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
-        // If there is a hash in the URL that matches a tab link, show that tab
-        if (window.location.hash) {
-          const tabTriggerEl = document.querySelector('a[href="' + window.location.hash + '"]');
-          if (tabTriggerEl) {
-            const tab = new bootstrap.Tab(tabTriggerEl);
-            tab.show();
-          }
-        }
-      });
+      // Initialize connection-specific select values
+      {% for connection in config.connections %}
+      document.getElementById('entertainment_group-{{ connection.id }}').value = '{{ connection.entertainment_group }}';
+      document.getElementById('entertainment_palette-{{ connection.id }}').value = '{{ connection.entertainment_palette | default: "auto" }}';
+      {% endfor %}
     </script>
   </body>
 </html>
